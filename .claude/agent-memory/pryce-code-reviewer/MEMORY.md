@@ -1,0 +1,3 @@
+- [Token system violations](feedback_token_system.md) — Developers hardcode #00464f; tokens.js primary is #006566; always grep for both values
+- [Discount sort requirement](feedback_discount_sort.md) — Must use discount_value field; label-string parsing produces wrong order across % and ₺ types
+- [DealsScreen reference patterns](project_deals_screen.md) — Clipboard timeout is 1500ms no clearTimeout; BfB algorithm canonical implementation

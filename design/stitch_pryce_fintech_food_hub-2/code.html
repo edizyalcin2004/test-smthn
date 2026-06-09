@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pryce - Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#a6cdd6",
+                      "on-surface-variant": "#41484a",
+                      "inverse-on-surface": "#f1f1f1",
+                      "on-tertiary-fixed-variant": "#604023",
+                      "tertiary-fixed": "#ffdcc2",
+                      "surface-variant": "#e2e2e3",
+                      "secondary-fixed": "#a1eff9",
+                      "primary-fixed": "#c1e9f2",
+                      "on-primary": "#ffffff",
+                      "surface-tint": "#3e646c",
+                      "surface-container": "#eeeeee",
+                      "tertiary-fixed-dim": "#ecbd98",
+                      "inverse-primary": "#a6cdd6",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-container": "#00464f",
+                      "secondary": "#006972",
+                      "on-tertiary-fixed": "#2e1501",
+                      "surface-dim": "#dadada",
+                      "primary": "#002e35",
+                      "secondary-container": "#9eecf6",
+                      "on-primary-fixed-variant": "#254c54",
+                      "on-secondary-container": "#0c6d76",
+                      "inverse-surface": "#2f3131",
+                      "surface-container-high": "#e8e8e8",
+                      "on-primary-container": "#70969f",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed": "#001f25",
+                      "outline-variant": "#c1c8c9",
+                      "on-tertiary-container": "#9daead",
+                      "outline": "#71787a",
+                      "error-container": "#ffdad6",
+                      "surface-container-highest": "#e2e2e3",
+                      "on-surface": "#1a1c1c",
+                      "tertiary-container": "#324242",
+                      "surface": "#f9f9f9",
+                      "surface-bright": "#f9f9f9",
+                      "on-secondary-fixed-variant": "#004f56",
+                      "on-secondary-fixed": "#001f23",
+                      "on-error-container": "#93000a",
+                      "on-background": "#1a1c1c",
+                      "error": "#ba1a1a",
+                      "background": "#f9f9f9",
+                      "on-secondary": "#ffffff",
+                      "surface-container-low": "#f4f3f4",
+                      "secondary-fixed-dim": "#85d3dd",
+                      "tertiary": "#251000"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max-width": "1200px",
+                      "margin-mobile": "16px",
+                      "base": "8px",
+                      "margin-desktop": "48px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Manrope"],
+                      "headline-md": ["Manrope"],
+                      "label-sm": ["Inter"],
+                      "display-lg": ["Manrope"],
+                      "headline-lg-mobile": ["Manrope"],
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "1.7", "letterSpacing": "0em", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid theme('colors.outline-variant');
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Typography fallback for missing custom tokens */
+        .font-headline-sm { font-family: 'Manrope', sans-serif; }
+        .text-headline-sm { font-size: 20px; line-height: 1.4; font-weight: 600; letter-spacing: -0.01em; }
+        
+        .font-body-sm { font-family: 'Inter', sans-serif; }
+        .text-body-sm { font-size: 14px; line-height: 1.5; font-weight: 400; }
+        
+        .font-label-md { font-family: 'Inter', sans-serif; }
+        .text-label-md { font-size: 12px; line-height: 1; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden pt-16 pb-24 md:pb-0 md:pt-20">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-md border-b border-outline-variant/30 dark:border-outline-variant/20 shadow-[0_4px_30px_rgba(0,0,0,0.05)] md:hidden">
+<div class="font-headline-lg-mobile text-headline-lg-mobile font-bold tracking-tight text-primary dark:text-primary-fixed-dim">Pryce</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:opacity-70 transition-opacity duration-300 active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-nPhFjHKfZ18jBvrgOSuE3nAw3jb34iORLj4pnboajNmPnvhXtBH6cl_aaZTVqVoRSZZ2tTI9ijvbXInqBfgKFJ6_ikqEa5eUaIeBi-yiyAS2YQLFU9bNBDXCq_nDGIBJZCr8eFGdpZ-fVpHteKUeJgXadbUD3ADN6Uwfstzl0fzsvDfdzquipM7SwC7jLcx-9sUpgXRU0PhGziclx9ZgQ-jY64h-w5OPu-6AbJzH1h26TJp4XerB1huiica1kMiQjGHTDW63dHg"/>
+</div>
+</div>
+</header>
+<!-- TopAppBar Desktop (Hidden on mobile) -->
+<header class="hidden md:flex fixed top-0 left-0 w-full z-50 justify-between items-center px-margin-desktop h-20 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 shadow-[0_4px_30px_rgba(0,0,0,0.05)]">
+<div class="font-headline-lg text-headline-lg font-bold tracking-tight text-primary">Pryce</div>
+<nav class="flex gap-8">
+<a class="text-primary font-bold hover:opacity-70 transition-opacity duration-300" href="#">Hub</a>
+<a class="text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity duration-300" href="#">Compare</a>
+<a class="text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity duration-300" href="#">Budget</a>
+<a class="text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity duration-300" href="#">Deals</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:opacity-70 transition-opacity duration-300">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">notifications</span>
+</button>
+<div class="flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity duration-300">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAELHza-hOq_xqLmfTf-OtndL70Jx457AceK5PzbLawzpfdEHjmfCkTzCQJbI3pRYph7oDQRz0iLPha7-zse9Qd9YtncyxyQ399Z895ro5T_ZLxEcxLuzkw2s7-P2tC8-AUPxqoyBEhlz56jv23OW2I-WUGsbm-LxfZwb2Yrd-NQytXFuVl4vFUfhRgkJ1AGmFwf_eBNDbEoT6Z2gsyOIYkhYt0SkWeMH4pFnCjjsdcC4fX09-Qgvoy6GjZ6DxlJ-NyWRvIP9DOo-Y"/>
+</div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant">Account</span>
+</div>
+</div>
+</header>
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop pt-8 md:pt-12 pb-12 flex flex-col gap-12">
+<!-- Section 1: GREETING -->
+<section class="flex flex-col gap-2">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Merhaba Ediz</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Bugün ne sipariş ediyoruz?</p>
+</section>
+<!-- Section 2: QUICK COMPARE CTA -->
+<section>
+<div class="glass-panel rounded-[32px] p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden bg-surface-container-lowest">
+<!-- Abstract background element -->
+<div class="absolute -right-16 -top-16 w-64 h-64 bg-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="flex flex-col gap-2 relative z-10">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Sepetini karşılaştır</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">3 platformda en ucuz fiyatı bul</p>
+</div>
+<button class="relative z-10 w-full md:w-auto px-6 py-4 rounded-full bg-gradient-to-b from-[#003d47] to-[#002e35] text-on-primary font-label-md text-label-md flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all duration-200 shadow-md">
+                    Karşılaştır
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Section 3: EN İYİ FIRSATLAR -->
+<section class="flex flex-col gap-4">
+<h3 class="font-label-md text-label-md text-on-surface-variant">En İyi Fırsatlar</h3>
+<div class="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-margin-mobile px-margin-mobile md:mx-0 md:px-0">
+<!-- Card 1 -->
+<div class="glass-panel rounded-xl p-6 min-w-[240px] flex flex-col gap-4 bg-surface-container-lowest relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant/50">
+<img alt="Burger logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVv42rWUJaVe2EEnum7-UGSCvGf3N5OnG2tq5bVZ0wlmlhJxwdyha6nsRQ-Wnr2PUMwRhyMpmCtZ12NvBSHRYWThO8k6BJfRUOEFFlnOnG4X9j1bFJvhrE-t1wehBLGc-w_1Jq4dbla_8tK5gnBptQwgPCz5XvJKwHsRXb0wEF2zd2jEhCANs-x-mNJdyYBd2sqjxJklyckcckXwGuRafQC5SLhyygHHLraNWsekVAtOSYPT2sBwjLERkVZnlbmsqpwFZlRKnvJoE"/>
+</div>
+<div class="w-3 h-3 rounded-full bg-[#FFC72C] shadow-sm"></div>
+</div>
+<div class="flex flex-col">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Burger King</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Big Mac Menü</p>
+</div>
+<div class="flex flex-col mt-2">
+<span class="font-display-lg text-display-lg text-secondary">%23</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">tasarruf — ₺127 yerine ₺98</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="glass-panel rounded-xl p-6 min-w-[240px] flex flex-col gap-4 bg-surface-container-lowest relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant/50">
+<img alt="Pizza logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMuIObH2PzYt9keM6dVuS-xD0WFUwmDEZ3r5D52VLSa1kUf1m9dzLKZjGBvpx8gZDrkAsCRO7G80t4ld-eGvW_lPRR24sMnbmP1-A3tyd6Om7PMB3dqaGa47mdgT0S_kqSDpMBGxOSUUaSrT7Sdq4G6Ms31rXMGuBJP8UdP_LQuU_f04-YQR7tc2ZSvl2AvhB9nlzD0qsUZxbc7OZ2WejijgZQbabEq3a9B5_moZG12rAs2zEI5tjytgjJ-L1FJj-912xKP1VSFko"/>
+</div>
+<div class="w-3 h-3 rounded-full bg-[#FF2D55] shadow-sm"></div>
+</div>
+<div class="flex flex-col">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Domino's</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Büyük Boy Karışık</p>
+</div>
+<div class="flex flex-col mt-2">
+<span class="font-display-lg text-display-lg text-secondary">%18</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">tasarruf — ₺250 yerine ₺205</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="glass-panel rounded-xl p-6 min-w-[240px] flex flex-col gap-4 bg-surface-container-lowest relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant/50">
+<img alt="Kebap logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByrnAWZ641f5zWOXOBSl1MxDY2DzRK8YOyXH-qQm9Op4CG_oWQqwOVfETWhRULTcUOjK4x_Ip99mbxTFVywWYBJLNyrJQJZ2wKiV7SqpQlvT4e3Q9gq2eHu1vKuoHb-Qh1VhZyhZsR5eh45LD1AH-DTbr7Sma2fW4i0oAcOpUAj3AKn2i-pW4HIs4hyS4xKPF6JFuNA4WiaJ-8j7yllTkXgkPXkv-R4c7cdAPvBFIl27UPIpxbOhfn_0ZFkvR-hnj4J9XZbD3ClVk"/>
+</div>
+<div class="w-3 h-3 rounded-full bg-[#00C853] shadow-sm"></div>
+</div>
+<div class="flex flex-col">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Köşebaşı</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Adana Dürüm</p>
+</div>
+<div class="flex flex-col mt-2">
+<span class="font-display-lg text-display-lg text-secondary">%15</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">tasarruf — ₺180 yerine ₺153</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 4: GÜNÜN KODLARI -->
+<section class="flex flex-col gap-4">
+<h3 class="font-label-md text-label-md text-on-surface-variant">Günün Kodları</h3>
+<div class="flex flex-col gap-3">
+<!-- Code 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors duration-200 cursor-pointer group">
+<div class="w-12 h-12 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">local_offer</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-headline-sm text-headline-sm text-on-surface font-mono tracking-tight">PRYCE20</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">%20 indirim, min ₺150</span>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant bg-surface hover:bg-surface-variant transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">content_copy</span>
+</button>
+</div>
+<!-- Code 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors duration-200 cursor-pointer group">
+<div class="w-12 h-12 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">redeem</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-headline-sm text-headline-sm text-on-surface font-mono tracking-tight">YEMEK30</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">₺30 anında indirim</span>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant bg-surface hover:bg-surface-variant transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">content_copy</span>
+</button>
+</div>
+<!-- Code 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors duration-200 cursor-pointer group">
+<div class="w-12 h-12 rounded-lg bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">electric_bolt</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-headline-sm text-headline-sm text-on-surface font-mono tracking-tight">HIZLI10</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Ücretsiz teslimat</span>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant bg-surface hover:bg-surface-variant transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">content_copy</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Section 5: KATEGORİLER -->
+<section class="flex flex-col gap-4">
+<h3 class="font-label-md text-label-md text-on-surface-variant">Kategoriler</h3>
+<div class="grid grid-cols-2 gap-4">
+<!-- Fast Food -->
+<div class="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-3 bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'wght' 300;">lunch_dining</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center uppercase">Fast Food</span>
+</div>
+<!-- Pizza -->
+<div class="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-3 bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'wght' 300;">local_pizza</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center uppercase">Pizza</span>
+</div>
+<!-- Kebap -->
+<div class="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-3 bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'wght' 300;">kebab_dining</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center uppercase">Kebap</span>
+</div>
+<!-- Uzak Doğu -->
+<div class="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-3 bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer transition-colors active:scale-95">
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'wght' 300;">ramen_dining</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center uppercase">Uzak Doğu</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-lg border-t border-outline-variant/30 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] md:hidden">
+<button class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim font-bold hover:opacity-100 transition-all duration-300 active:scale-90 rounded-full px-4 py-2 bg-secondary-container/30">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 400, 'FILL' 1;">grid_view</span>
+<span class="font-label-sm text-label-sm uppercase tracking-tighter">Hub</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-50 hover:opacity-100 transition-all duration-300 active:scale-90 w-16">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 300;">compare_arrows</span>
+<span class="font-label-sm text-label-sm uppercase tracking-tighter">Compare</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-50 hover:opacity-100 transition-all duration-300 active:scale-90 w-16">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 300;">account_balance_wallet</span>
+<span class="font-label-sm text-label-sm uppercase tracking-tighter">Budget</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-50 hover:opacity-100 transition-all duration-300 active:scale-90 w-16">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 300;">sell</span>
+<span class="font-label-sm text-label-sm uppercase tracking-tighter">Deals</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-50 hover:opacity-100 transition-all duration-300 active:scale-90 w-16">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 300;">person</span>
+<span class="font-label-sm text-label-sm uppercase tracking-tighter">Account</span>
+</button>
+</nav>
+<script>
+        // Simple copy to clipboard functionality for code cards
+        document.querySelectorAll('button[class*="content_copy"]').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const codeSpan = this.parentElement.querySelector('span.font-mono');
+                if(codeSpan) {
+                    navigator.clipboard.writeText(codeSpan.innerText);
+                    const icon = this.querySelector('.material-symbols-outlined');
+                    const originalText = icon.innerText;
+                    icon.innerText = 'check';
+                    setTimeout(() => {
+                        icon.innerText = originalText;
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+</body></html>

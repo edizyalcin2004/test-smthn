@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hesabım - Pryce</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline": "#70797a",
+                      "surface-tint": "#2e666f",
+                      "surface-variant": "#e1e3e4",
+                      "secondary-container": "#8feefc",
+                      "primary-fixed-dim": "#99d0da",
+                      "primary-container": "#00464f",
+                      "surface-container-high": "#e7e8e9",
+                      "tertiary-container": "#324242",
+                      "on-primary-fixed-variant": "#0f4e57",
+                      "on-primary-fixed": "#001f24",
+                      "on-primary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed": "#d4e6e5",
+                      "surface-container-low": "#f3f4f5",
+                      "surface": "#f8f9fa",
+                      "on-surface-variant": "#40484a",
+                      "on-error-container": "#93000a",
+                      "inverse-primary": "#99d0da",
+                      "on-tertiary-container": "#9daead",
+                      "on-secondary-fixed": "#001f23",
+                      "error": "#ba1a1a",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed-variant": "#3a4a49",
+                      "on-tertiary": "#ffffff",
+                      "on-secondary-container": "#006d77",
+                      "background": "#f8f9fa",
+                      "primary": "#002e35",
+                      "tertiary-fixed-dim": "#b8cac9",
+                      "outline-variant": "#bfc8ca",
+                      "inverse-surface": "#2e3132",
+                      "secondary": "#006972",
+                      "on-surface": "#191c1d",
+                      "primary-fixed": "#b4ecf7",
+                      "surface-container-highest": "#e1e3e4",
+                      "surface-container": "#edeeef",
+                      "on-tertiary-fixed": "#0e1e1e",
+                      "surface-bright": "#f8f9fa",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed": "#92f1fe",
+                      "tertiary": "#1c2c2c",
+                      "on-background": "#191c1d",
+                      "on-primary-container": "#7db3bd",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#004f56",
+                      "secondary-fixed-dim": "#75d5e2",
+                      "surface-dim": "#d9dadb"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px",
+                      "2xl": "1rem",
+                      "3xl": "1.5rem"
+              },
+              "spacing": {
+                      "container-padding-mb": "20px",
+                      "unit": "8px",
+                      "card-padding": "32px",
+                      "stack-md": "24px",
+                      "stack-sm": "12px",
+                      "container-padding-dt": "40px",
+                      "gutter": "24px",
+                      "safe": "env(safe-area-inset-bottom)"
+              },
+              "fontFamily": {
+                      "headline-sm": ["Manrope"],
+                      "body-sm": ["Inter"],
+                      "headline-md": ["Manrope"],
+                      "label-md": ["Inter"],
+                      "headline-lg-mobile": ["Manrope"],
+                      "display-lg": ["Manrope"],
+                      "body-md": ["Inter"],
+                      "headline-lg": ["Manrope"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "1.5", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "800"}],
+                      "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "1.7", "letterSpacing": "0em", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+          font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Subtle ambient shadow for high-craft feel */
+        .ambient-shadow {
+            box-shadow: 0 4px 24px -4px rgba(0, 46, 53, 0.04), 0 2px 8px -2px rgba(0, 46, 53, 0.02);
+        }
+        
+        /* Inner bevel for cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 4px 24px -4px rgba(0, 46, 53, 0.04);
+            border: 1px solid rgba(225, 227, 228, 0.4);
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/10 shadow-sm flex justify-between items-center px-container-padding-mb h-16 md:px-container-padding-dt">
+<div class="flex items-center gap-4 text-primary">
+<span class="material-symbols-outlined text-[24px]">restaurant_menu</span>
+<span class="font-headline-md text-headline-md tracking-tight">Pryce</span>
+</div>
+<!-- Desktop Nav Cluster (Hidden on Mobile) -->
+<nav class="hidden md:flex gap-8">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">grid_view</span> Hub
+            </a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">compare_arrows</span> Compare
+            </a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">account_balance_wallet</span> Budget
+            </a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">sell</span> Deals
+            </a>
+<a class="font-label-md text-label-md text-primary flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px] icon-fill">person</span> Account
+            </a>
+</nav>
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">person</span>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="pt-24 px-container-padding-mb md:px-container-padding-dt max-w-[1280px] mx-auto min-h-screen pb-16">
+<div class="flex flex-col md:flex-row gap-gutter">
+<!-- Left Column: Profile Info & Pro Card -->
+<div class="w-full md:w-1/3 flex flex-col gap-stack-md">
+<!-- Profile Header Card -->
+<div class="glass-card rounded-3xl p-stack-md flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full bg-surface-container-high border-2 border-surface flex items-center justify-center mb-4 relative shadow-sm">
+<span class="material-symbols-outlined text-[48px] text-surface-tint">account_circle</span>
+<div class="absolute bottom-0 right-0 w-6 h-6 bg-secondary text-on-secondary rounded-full flex items-center justify-center border-2 border-surface shadow-sm">
+<span class="material-symbols-outlined text-[14px]">edit</span>
+</div>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-1">Ahmet Yılmaz</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6">ahmet.yilmaz@example.com</p>
+<div class="bg-surface-container rounded-full px-4 py-2 flex items-center gap-2 w-full justify-center">
+<span class="material-symbols-outlined text-surface-tint text-[18px]">workspace_premium</span>
+<span class="font-label-md text-label-md text-on-surface uppercase">Pryce Puan: 1,240</span>
+</div>
+</div>
+<!-- Pryce Pro Upgrade Card -->
+<div class="rounded-3xl p-stack-md bg-gradient-to-br from-primary to-surface-tint text-on-primary shadow-lg relative overflow-hidden group">
+<!-- Decorative blur element -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary-container/20 rounded-full blur-2xl"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h2 class="font-headline-md text-headline-md mb-1 flex items-center gap-2">
+                                    Pryce Pro
+                                    <span class="material-symbols-outlined text-secondary-fixed text-[20px] icon-fill">star</span>
+</h2>
+<p class="font-body-sm text-body-sm text-primary-fixed-dim">Premium alışveriş deneyimi</p>
+</div>
+<div class="text-right">
+<span class="font-headline-sm text-headline-sm block">49 TL</span>
+<span class="font-label-md text-label-md text-primary-fixed-dim block">/ ay</span>
+</div>
+</div>
+<ul class="flex flex-col gap-3 mb-8">
+<li class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-full bg-secondary-fixed/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-secondary-fixed font-bold">check</span>
+</div>
+<span class="font-body-sm text-body-sm">Sınırsız sepet karşılaştırması</span>
+</li>
+<li class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-full bg-secondary-fixed/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-secondary-fixed font-bold">check</span>
+</div>
+<span class="font-body-sm text-body-sm">Özel indirim alarmları</span>
+</li>
+<li class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-full bg-secondary-fixed/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-secondary-fixed font-bold">check</span>
+</div>
+<span class="font-body-sm text-body-sm">Detaylı bütçe analizleri</span>
+</li>
+</ul>
+<button class="w-full py-3 bg-secondary-fixed text-on-secondary-fixed rounded-xl font-label-md text-label-md uppercase tracking-wider hover:bg-white transition-colors active:scale-[0.98]">
+                            Şimdi Yükselt
+                        </button>
+</div>
+</div>
+</div>
+<!-- Right Column: Settings & Content -->
+<div class="w-full md:w-2/3 flex flex-col gap-stack-md">
+<!-- Bento Grid for Quick Stats -->
+<div class="grid grid-cols-2 gap-stack-sm md:gap-stack-md">
+<div class="glass-card rounded-2xl p-stack-sm flex flex-col justify-between h-32 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px] text-surface-tint">shopping_basket</span>
+</div>
+<div>
+<span class="font-headline-md text-headline-md text-on-surface block">12</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Kayıtlı Sepet</span>
+</div>
+</div>
+<div class="glass-card rounded-2xl p-stack-sm flex flex-col justify-between h-32 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px] text-surface-tint">history</span>
+</div>
+<div>
+<span class="font-headline-md text-headline-md text-on-surface block">34</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Geçmiş Sipariş</span>
+</div>
+</div>
+</div>
+<!-- Settings Menu List -->
+<div class="glass-card rounded-3xl p-2">
+<h3 class="font-label-md text-label-md text-outline uppercase px-4 pt-4 pb-2">Hesap Ayarları</h3>
+<ul class="flex flex-col">
+<li>
+<a class="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface flex items-center justify-center group-hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-surface-tint text-[20px]">manage_accounts</span>
+</div>
+<div>
+<span class="font-body-md text-body-md text-on-surface block">Kişisel Bilgiler</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Ad, soyad, e-posta</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-surface-tint transition-colors">chevron_right</span>
+</a>
+</li>
+<li class="h-px bg-surface-variant mx-4"></li>
+<li>
+<a class="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface flex items-center justify-center group-hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-surface-tint text-[20px]">location_on</span>
+</div>
+<div>
+<span class="font-body-md text-body-md text-on-surface block">Adreslerim</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Teslimat adreslerini yönet</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-surface-tint transition-colors">chevron_right</span>
+</a>
+</li>
+<li class="h-px bg-surface-variant mx-4"></li>
+<li>
+<a class="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface flex items-center justify-center group-hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-surface-tint text-[20px]">credit_card</span>
+</div>
+<div>
+<span class="font-body-md text-body-md text-on-surface block">Ödeme Yöntemleri</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Kayıtlı kartlar</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-surface-tint transition-colors">chevron_right</span>
+</a>
+</li>
+<li class="h-px bg-surface-variant mx-4"></li>
+<li>
+<a class="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface flex items-center justify-center group-hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-surface-tint text-[20px]">notifications_active</span>
+</div>
+<div>
+<span class="font-body-md text-body-md text-on-surface block">Bildirim Tercihleri</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">İndirim alarmları, bülten</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-surface-tint transition-colors">chevron_right</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Sign Out Action -->
+<button class="w-full mt-4 py-4 rounded-xl border border-outline-variant text-error bg-transparent hover:bg-error-container/20 transition-colors font-label-md text-label-md uppercase tracking-wider flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+                    Çıkış Yap
+                </button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl border-t border-white/20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] bg-surface/80 backdrop-blur-xl">
+<div class="flex justify-around items-center py-3 px-2 pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-label-md text-label-md mt-1">Hub</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">compare_arrows</span>
+<span class="font-label-md text-label-md mt-1">Compare</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md mt-1">Budget</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">sell</span>
+<span class="font-label-md text-label-md mt-1">Deals</span>
+</a>
+<!-- Active State -->
+<a class="flex flex-col items-center justify-center text-secondary bg-secondary-container/30 rounded-full px-4 py-1 active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined icon-fill">person</span>
+<span class="font-label-md text-label-md mt-1">Account</span>
+</a>
+</div>
+</nav>
+</body></html>

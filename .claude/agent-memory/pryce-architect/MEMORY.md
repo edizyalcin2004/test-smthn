@@ -1,0 +1,2 @@
+- [Pryce app status](project_pryce_status.md) — Build state: Hub + Deals live, Compare referenced, 3 tabs stubbed, backend URL, test via Expo Go on iPhone
+- [DealsScreen architecture](project_deals_screen.md) — Data-fetch pattern, Bang for Buck algorithm, platform sections, discount code format, navigation prop usage

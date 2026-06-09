@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pryce - Arama</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#7db3bd",
+                        "on-primary-fixed-variant": "#0f4e57",
+                        "surface-dim": "#d9dadb",
+                        "secondary-fixed-dim": "#75d5e2",
+                        "background": "#f8f9fa",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e1e3e4",
+                        "surface-bright": "#f8f9fa",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#3a4a49",
+                        "outline-variant": "#bfc8ca",
+                        "on-background": "#191c1d",
+                        "on-primary-fixed": "#001f24",
+                        "tertiary-fixed-dim": "#b8cac9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#001f23",
+                        "tertiary": "#1c2c2c",
+                        "surface-container-low": "#f3f4f5",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-surface-variant": "#40484a",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#8feefc",
+                        "primary-fixed": "#b4ecf7",
+                        "surface-tint": "#2e666f",
+                        "on-tertiary-container": "#9daead",
+                        "primary-fixed-dim": "#99d0da",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#f0f1f2",
+                        "outline": "#70797a",
+                        "secondary-fixed": "#92f1fe",
+                        "inverse-surface": "#2e3132",
+                        "on-tertiary-fixed": "#0e1e1e",
+                        "primary-container": "#00464f",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#006972",
+                        "on-surface": "#191c1d",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-container": "#edeeef",
+                        "surface": "#f8f9fa",
+                        "on-secondary-container": "#006d77",
+                        "tertiary-fixed": "#d4e6e5",
+                        "on-secondary-fixed-variant": "#004f56",
+                        "primary": "#002e35",
+                        "inverse-primary": "#99d0da",
+                        "tertiary-container": "#324242"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "24px",
+                        "container-padding-dt": "40px",
+                        "gutter": "24px",
+                        "container-padding-mb": "20px",
+                        "unit": "8px",
+                        "stack-sm": "12px",
+                        "card-padding": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Manrope"],
+                        "headline-md": ["Manrope"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Manrope"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-sm": ["Manrope"],
+                        "headline-lg": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "800"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "1.7", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background-color: rgba(252, 252, 253, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.05), 0 8px 16px -8px rgba(0, 0, 0, 0.02);
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased min-h-screen flex flex-col pt-16 pb-24 md:pb-0 md:pt-20">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-xl border-b border-white/10 dark:border-white/5 shadow-sm hidden md:block">
+<div class="flex justify-between items-center px-container-padding-mb h-16 w-full max-w-7xl mx-auto">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-headline-md text-headline-md text-primary tracking-tight">Pryce</span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Hub</a>
+<a class="font-label-md text-label-md text-primary flex flex-col items-center justify-center bg-secondary-container/30 rounded-full px-4 py-1" href="#">Compare</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Budget</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Deals</a>
+</nav>
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden border border-white/20">
+<img alt="User Profile Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDR0DqU-W4OAYOiH7GxFi0lxc9rqNzaQBq7hAGLGYjPQNCEFum4ortl5FtPlbE95aiIoQsMOiPCOZO16rP8wt6P3hHr6BAR8CmqmLiP99bcKba7t6cTGxnr-h6M1_FPxfIgMMRYjIJq5yxDicFGQx_09-LLzYbOgp0gEkwiMAV8tSmXsi5rhc17My3ZsGDhj4WFi7n_HXK9LHF7-igsBdTei0B4ikQtZxqxs_l5ZVGsr7AfDT7HnFPlc86XJNlnGV_0UECgHHWumrY"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Mobile Top Header (Search specific) -->
+<header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md border-b border-surface-variant/50 md:hidden px-container-padding-mb py-4 flex items-center justify-between">
+<span class="font-headline-md text-headline-md text-primary tracking-tight">Arama</span>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow w-full max-w-3xl mx-auto px-container-padding-mb md:px-0 flex flex-col gap-stack-md mt-4 md:mt-12">
+<!-- Search Bar Area -->
+<section class="w-full sticky top-16 md:top-24 z-40 bg-background/80 backdrop-blur-md py-4 -mx-container-padding-mb px-container-padding-mb md:mx-0 md:px-0">
+<div class="relative w-full group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+</div>
+<input autocomplete="off" class="block w-full pl-12 pr-4 py-4 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-body-md text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary focus:border-primary transition-all duration-200 shadow-sm focus:shadow-md" placeholder="Restoran, yemek veya mutfak arayın..." type="text"/>
+</div>
+</section>
+<!-- Recent Searches -->
+<section class="flex flex-col gap-stack-sm animate-fade-in">
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Son Aramalar</h2>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 bg-surface-container-low rounded-full font-body-sm text-body-sm text-on-surface border border-outline-variant/30 hover:bg-surface-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="history">history</span>
+                    Burger King
+                </button>
+<button class="px-4 py-2 bg-surface-container-low rounded-full font-body-sm text-body-sm text-on-surface border border-outline-variant/30 hover:bg-surface-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="history">history</span>
+                    Sushi
+                </button>
+<button class="px-4 py-2 bg-surface-container-low rounded-full font-body-sm text-body-sm text-on-surface border border-outline-variant/30 hover:bg-surface-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="history">history</span>
+                    Nusret
+                </button>
+<button class="px-4 py-2 bg-surface-container-low rounded-full font-body-sm text-body-sm text-on-surface border border-outline-variant/30 hover:bg-surface-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="history">history</span>
+                    Kebap
+                </button>
+</div>
+</section>
+<!-- Popular Categories / Bento -->
+<section class="flex flex-col gap-stack-sm mt-4">
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Popüler Kategoriler</h2>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="glass-panel rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:-translate-y-1 transition-transform duration-200">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="lunch_dining">lunch_dining</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Fast Food</span>
+</div>
+<div class="glass-panel rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:-translate-y-1 transition-transform duration-200">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="local_pizza">local_pizza</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Pizza</span>
+</div>
+<div class="glass-panel rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:-translate-y-1 transition-transform duration-200">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="kebab_dining">kebab_dining</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Kebap</span>
+</div>
+<div class="glass-panel rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:-translate-y-1 transition-transform duration-200">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="ramen_dining">ramen_dining</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Uzak Doğu</span>
+</div>
+</div>
+</section>
+<!-- Popular Restaurants List -->
+<section class="flex flex-col gap-stack-sm mt-6">
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Popüler Restoranlar</h2>
+<div class="flex flex-col bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
+<!-- List Item 1 -->
+<div class="flex items-center p-4 border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-12 h-12 rounded-lg bg-surface-variant overflow-hidden mr-4 flex-shrink-0">
+<img alt="Gourmet burger presentation on dark slate." class="w-full h-full object-cover" data-alt="A close up, high quality photograph of a gourmet burger on a dark slate background, representing a high-end fast food restaurant logo. The lighting is moody and directional, highlighting the textures of the bun and meat. The overall aesthetic is modern, appetizing, and premium, fitting a luxury food delivery app interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBACaL_2_OHIKw-kAR_n3KKYcX1u7YH4PAk0jSJTiGUImDUH4bh5l38srjbPikGvDQgPp05CUecpoVOde1nzGyH-uvD-T1aJ7kDbW_p199cf39sj8_-RNPD-U7Ob-VDn0d9fXFa5PAMNmu5_FQ470wpWLA3wQBYPf-OGhl6camb9ORpnwR_M1VhGi0N6YUwBVfXvOlhBCG8_PP17bVhJgfEpGNR75Ymr9wk2vSArRPKj_GWTbep9AhH0a2dFYtSs8PpN5BJwK-gsos"/>
+</div>
+<div class="flex flex-col flex-grow min-w-0">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate group-hover:text-primary transition-colors">The Burger House</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-label-md text-label-md text-outline">Amerikan</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-label-md text-label-md text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="star" data-weight="fill">star</span> 4.8
+                            </span>
+</div>
+</div>
+<div class="flex gap-1 ml-4 flex-shrink-0">
+<!-- Platform Dots -->
+<div class="w-3 h-3 rounded-full bg-[#EA004B]" title="Yemeksepeti"></div>
+<div class="w-3 h-3 rounded-full bg-[#5D3EBD]" title="Getir"></div>
+<div class="w-3 h-3 rounded-full bg-[#F27A1A]" title="Trendyol"></div>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="flex items-center p-4 border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-12 h-12 rounded-lg bg-surface-variant overflow-hidden mr-4 flex-shrink-0">
+<img alt="Fresh sushi rolls arrangement." class="w-full h-full object-cover" data-alt="A clean, bright photograph of fresh sushi rolls arranged symmetrically on a minimalist ceramic plate. The lighting is high-key and soft, creating a pristine, modern look suitable for a Japanese restaurant profile image in a luxury app. The colors are natural and vibrant against a clean white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5YoNPaAOtWd-QNYve89lqQPks762ER0IyQDuv3HZWVYk7X4UcZXhFF7nDwnA6OCXi8qeTWLZk9JQtv83onIGf9MX4qe2vUfvT1lFdubZ6Ezgkztk_Iz0kTaREXA7zhk0oD0TAo9c1kfXKyxGPg7YixWuMduvKHfz3HkEF83PAn-hqSrIPMOtWbMGG3qSaa2fFX5plmjTrnkvAgclm5ElJZ2BQULArj5uTyLumPYGR_6PHngomdARgqVWOcjp8wWV0j189krCNkCY"/>
+</div>
+<div class="flex flex-col flex-grow min-w-0">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate group-hover:text-primary transition-colors">Sushi Co.</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-label-md text-label-md text-outline">Japon</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-label-md text-label-md text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="star" data-weight="fill">star</span> 4.5
+                            </span>
+</div>
+</div>
+<div class="flex gap-1 ml-4 flex-shrink-0">
+<div class="w-3 h-3 rounded-full bg-[#EA004B]" title="Yemeksepeti"></div>
+<div class="w-3 h-3 rounded-full bg-[#5D3EBD]" title="Getir"></div>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="flex items-center p-4 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-12 h-12 rounded-lg bg-surface-variant overflow-hidden mr-4 flex-shrink-0">
+<img alt="Traditional Turkish Kebab." class="w-full h-full object-cover" data-alt="A detailed, appetizing shot of a traditional Turkish Kebab plated on copper dishware with grilled peppers and tomatoes. The lighting is warm and inviting, emphasizing the rich textures and colors of the meat and vegetables. The setting implies a high-quality, authentic dining experience." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfafpjKm6NrdZJmcQNlE3sguJpsisUzD6vbSUR0wKlZ-aimD8TIpwCGL8dxBVe3TQ_Pb41-uexmT_7mijuAWKTsdCZZv4-E8iYWVhMGG7tAXZXRXUi32dSKdPeLEFj4jj-JEuYWha1JifMZFeStOZ8tXS5ngRepg2VqN7nzmUh_wFwnvwP55ejb1uQxG8U88je-aEEhLT4U-WxMwhhb3sZhVx5H3rhc9gMekn-D9sPmmzx5RlJ7tm25lMKF2Cl58NPJwBXvfEk-44"/>
+</div>
+<div class="flex flex-col flex-grow min-w-0">
+<h3 class="font-body-md text-body-md font-semibold text-on-surface truncate group-hover:text-primary transition-colors">Bosphorus Kebap</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-label-md text-label-md text-outline">Türk</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-label-md text-label-md text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="star" data-weight="fill">star</span> 4.9
+                            </span>
+</div>
+</div>
+<div class="flex gap-1 ml-4 flex-shrink-0">
+<div class="w-3 h-3 rounded-full bg-[#5D3EBD]" title="Getir"></div>
+<div class="w-3 h-3 rounded-full bg-[#F27A1A]" title="Trendyol"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Empty State (Hidden by default, shown via JS if search is empty/no results, but designed here for visual representation) -->
+<section class="hidden flex-col items-center justify-center py-16 text-center" id="empty-state">
+<div class="relative w-24 h-24 mb-6 text-primary/20 flex items-center justify-center pulse-animation">
+<span class="material-symbols-outlined text-[80px]" data-icon="search">search</span>
+<div class="absolute inset-0 bg-secondary/10 rounded-full blur-xl -z-10"></div>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Aradığınızı bulamadık</h3>
+<p class="font-body-md text-body-md text-outline max-w-sm">Farklı anahtar kelimeler deneyerek tüm platformlardaki restoranları karşılaştırın.</p>
+</section>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center py-3 px-2 pb-safe bg-surface/80 dark:bg-surface-container/80 backdrop-blur-xl z-50 rounded-t-xl border-t border-white/20 dark:border-white/5 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="grid_view">grid_view</span>
+<span class="font-label-md text-[10px]">Hub</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim bg-secondary-container/30 dark:bg-secondary-container/10 rounded-full px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="compare_arrows">compare_arrows</span>
+<span class="font-label-md text-[10px]">Compare</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-label-md text-[10px]">Budget</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="sell">sell</span>
+<span class="font-label-md text-[10px]">Deals</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:text-primary transition-colors active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-label-md text-[10px]">Account</span>
+</a>
+</nav>
+<script>
+        // Simple script to toggle empty state for demonstration if input has value
+        const searchInput = document.querySelector('input[type="text"]');
+        const emptyState = document.getElementById('empty-state');
+        const contentSections = document.querySelectorAll('main > section:not(:first-child):not(#empty-state)');
+
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            if (val === 'empty') {
+                contentSections.forEach(sec => sec.classList.add('hidden'));
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                contentSections.forEach(sec => sec.classList.remove('hidden'));
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+            }
+        });
+    </script>
+</body></html>

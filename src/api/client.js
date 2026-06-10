@@ -48,13 +48,40 @@ export function getMenu(restaurantId) {
 }
 
 // POST /compare-basket — items: [{id, name, qty}]. Returns a bare array
-// already sorted by total ascending:
-// {platform: {id, name, hex_color}, items: [{name, price|null, found}], total: "string"}
+// sorted by effective price ascending (code-adjusted total when a code
+// applies, raw total otherwise):
+// {platform: {id, name, hex_color}, items: [{name, price|null, found}],
+//  total: "string",
+//  best_code: {code, title, discount_type, discount_value, minimum_order} | null,
+//  total_after_code: "string" | null}
 // A found:false item's price is null AND excluded from that platform's
 // total — callers must surface it as unavailable, never as a number.
+// best_code is null unless EVERY condition is verifiably met backend-side;
+// callers must never invent or estimate a discount themselves.
 export function compareBasket(restaurantId, items) {
   return request('/compare-basket', {
     method: 'POST',
     body: { restaurant_id: restaurantId, items },
   });
+}
+
+// GET /menu-items — all items with nested restaurant + per-platform prices:
+// {id, name, category, description, restaurant: {id, name},
+//  prices: [{platform: {name, hex_color}, price: "string", old_price}]}
+export function getMenuItems() {
+  return request('/menu-items');
+}
+
+// GET /discount-codes?restaurant_id= — latest terms per code, expired
+// hidden by backend. Platform-wide codes (restaurant_id null) are included
+// under a restaurant filter:
+// {id, platform: {id, name, hex_color}, restaurant_id, code: "" for
+//  codeless campaigns, title, discount_type: "fixed"|"percentage",
+//  discount_value: "string", minimum_order: "string"|null,
+//  expiry_date, item_scoped, scraped_at}
+// item_scoped:true means the discount only applies to specific products —
+// show it, but never present it as guaranteed for an arbitrary basket.
+export function getDiscountCodes(restaurantId) {
+  const query = restaurantId != null ? `?restaurant_id=${restaurantId}` : '';
+  return request(`/discount-codes${query}`);
 }

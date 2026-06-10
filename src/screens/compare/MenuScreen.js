@@ -186,6 +186,9 @@ function ResultsView({ results, onReset }) {
       <Text style={s.resultsHeading}>Best prices found</Text>
       {results.map((p, i) => {
         const missing = (p.items ?? []).filter((it) => !it.found).length;
+        // total_after_code is set only when the backend verified a code
+        // applies to this basket — that's the price the user actually pays.
+        const hasCode = p.total_after_code != null && p.best_code != null;
         return (
           <View key={String(p.platform.id)} style={[s.platformCard, i === 0 && s.platformCardWin]}>
             {i === 0 && <Text style={s.winBadge}>EN UCUZ</Text>}
@@ -193,10 +196,25 @@ function ResultsView({ results, onReset }) {
               <Text style={[s.platformName, i === 0 && s.onWin]}>
                 {p.platform.name}
               </Text>
-              <Text style={[s.platformTotal, i === 0 && s.onWin]}>
-                ₺{Number(p.total).toFixed(2)}
-              </Text>
+              <View style={s.totalCol}>
+                {hasCode && (
+                  <Text style={[s.totalStruck, i === 0 && s.onWinSub]}>
+                    ₺{Number(p.total).toFixed(2)}
+                  </Text>
+                )}
+                <Text style={[s.platformTotal, i === 0 && s.onWin]}>
+                  ₺{Number(hasCode ? p.total_after_code : p.total).toFixed(2)}
+                </Text>
+              </View>
             </View>
+            {hasCode && (
+              <Text style={[s.codeApplied, i === 0 && s.onWinSub]}>
+                {p.best_code.code
+                  ? `Kod uygulandı: ${p.best_code.code}`
+                  : `Kampanya: ${p.best_code.title}`}
+                {'  ·  '}−₺{(Number(p.total) - Number(p.total_after_code)).toFixed(2)}
+              </Text>
+            )}
             {(p.items ?? []).map((it, j) => (
               <Text key={String(j)} style={[s.platformDetail, i === 0 && s.onWinSub]}>
                 {it.found && it.price != null
@@ -279,6 +297,9 @@ const s = StyleSheet.create({
   platformRow:       { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   platformName:      { fontFamily: fonts.bodySemi, fontSize: 17, color: colors.textPrimary },
   platformTotal:     { fontFamily: fonts.headline, fontSize: 24, color: colors.textPrimary },
+  totalCol:          { alignItems: 'flex-end' },
+  totalStruck:       { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, textDecorationLine: 'line-through' },
+  codeApplied:       { fontFamily: fonts.bodySemi, fontSize: 12, color: '#2e7d32', marginTop: 6 },
   onWin:             { color: '#fff' },
   platformDetail:    { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, marginTop: 5 },
   platformCaveat:    { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.textSecondary, marginTop: 8 },

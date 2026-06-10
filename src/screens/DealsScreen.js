@@ -6,8 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radii, shadows } from '../theme/tokens';
-
-const API = 'https://pryce-backend-production.up.railway.app';
+import { getMenuItems, getDiscountCodes } from '../api/client';
 
 const PLATFORM_ORDER = ['Yemeksepeti', 'Trendyol Yemek', 'Getir Yemek', "McDonald's Türkiye Direct"];
 const PLATFORM_COLORS = {
@@ -17,15 +16,6 @@ const PLATFORM_COLORS = {
   "McDonald's Türkiye Direct":'#FFC72C',
 };
 
-const DISCOUNT_CODES = [
-  { platform: 'Trendyol Yemek', color: '#FF6000', restaurant: "McDonald's", code: 'MCTREND15',  label: '%15 indirim', detail: 'Min. ₺150' },
-  { platform: 'Yemeksepeti',    color: '#D6001C', restaurant: "McDonald's", code: 'MCYEMEK10',  label: '%10 indirim', detail: 'Min. ₺100' },
-  { platform: 'Getir Yemek',    color: '#5D3EB2', restaurant: "McDonald's", code: 'GETIRMAC20', label: '₺20 indirim', detail: 'Min. ₺200' },
-  { platform: 'Trendyol Yemek', color: '#FF6000', restaurant: 'Komagene',   code: 'KOMATREND',  label: '%10 indirim', detail: 'Min. ₺150' },
-  { platform: 'Yemeksepeti',    color: '#D6001C', restaurant: 'Burger King', code: 'BKYEMEK15',  label: '%15 indirim', detail: 'Min. ₺150' },
-  { platform: 'Trendyol Yemek', color: '#FF6000', restaurant: 'Tüm restoranlar', code: 'TREND5TL', label: '₺5 indirim', detail: 'Min. ₺50' },
-];
-
 const POPULAR = ["McDonald's", 'Komagene', 'Burger King'];
 
 function fmt(val) {
@@ -34,6 +24,17 @@ function fmt(val) {
 
 function platformColor(platformName, fallback) {
   return PLATFORM_COLORS[platformName] || fallback || '#999';
+}
+
+// "₺100 indirim" / "%15 indirim" — null for unknown discount types (shown
+// without an amount rather than guessing).
+function discountLabel(dc) {
+  const val = Number(dc.discount_value);
+  if (!val || isNaN(val)) return null;
+  const amount = Number.isInteger(val) ? String(val) : fmt(val);
+  if (dc.discount_type === 'percentage') return `%${amount} indirim`;
+  if (dc.discount_type === 'fixed') return `₺${amount} indirim`;
+  return null;
 }
 
 function calcBangForBuck(items) {
@@ -125,27 +126,41 @@ function DealCard({ item }) {
   );
 }
 
-function CodeCard({ dc, copied, onCopy }) {
+function CodeCard({ dc, restaurantName, copied, onCopy }) {
+  const color   = platformColor(dc.platform?.name, dc.platform?.hex_color);
+  const hasCode = !!dc.code;
+  const label   = discountLabel(dc);
+  const minOrder = dc.minimum_order != null ? `Min. ₺${fmt(dc.minimum_order)}` : null;
+
   return (
-    <View style={[s.codeCard, { borderLeftColor: dc.color }]}>
+    <View style={[s.codeCard, { borderLeftColor: color }]}>
       <View style={s.codeLeft}>
-        <Text style={s.codePlatform}>{dc.platform}</Text>
-        <Text style={s.codeRestaurant}>{dc.restaurant}</Text>
-        <Text style={s.codeString}>{dc.code}</Text>
+        <Text style={s.codePlatform}>{dc.platform?.name}</Text>
+        <Text style={s.codeRestaurant}>{restaurantName}</Text>
+        {hasCode ? (
+          <Text style={s.codeString}>{dc.code}</Text>
+        ) : (
+          <Text style={s.codeTitle}>{dc.title}</Text>
+        )}
+        {dc.item_scoped && (
+          <Text style={s.codeScoped}>Belirli ürünlerde geçerli</Text>
+        )}
       </View>
       <View style={s.codeRight}>
-        <Text style={s.codeLabel}>{dc.label}</Text>
-        <Text style={s.codeDetail}>{dc.detail}</Text>
-        <Pressable style={[s.copyBtn, { borderColor: colors.primary }]} onPress={() => onCopy(dc.code)}>
-          {copied === dc.code ? (
-            <Text style={[s.copyBtnText, { color: colors.primary }]}>Kopyalandı!</Text>
-          ) : (
-            <View style={s.copyRow}>
-              <Ionicons name="copy-outline" size={13} color={colors.primary} />
-              <Text style={[s.copyBtnText, { color: colors.primary }]}> Kopyala</Text>
-            </View>
-          )}
-        </Pressable>
+        {label && <Text style={s.codeLabel}>{label}</Text>}
+        {minOrder && <Text style={s.codeDetail}>{minOrder}</Text>}
+        {hasCode && (
+          <Pressable style={[s.copyBtn, { borderColor: colors.primary }]} onPress={() => onCopy(dc.code)}>
+            {copied === dc.code ? (
+              <Text style={[s.copyBtnText, { color: colors.primary }]}>Kopyalandı!</Text>
+            ) : (
+              <View style={s.copyRow}>
+                <Ionicons name="copy-outline" size={13} color={colors.primary} />
+                <Text style={[s.copyBtnText, { color: colors.primary }]}> Kopyala</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -155,6 +170,7 @@ function CodeCard({ dc, copied, onCopy }) {
 
 export default function DealsScreen() {
   const [items, setItems]                 = useState([]);
+  const [allCodes, setAllCodes]           = useState([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState(null);
   const [query, setQuery]                 = useState('');
@@ -177,10 +193,14 @@ export default function DealsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const res  = await fetch(`${API}/menu-items`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setItems(data);
+      // Codes are nice-to-have — a failure there degrades to an empty list
+      // instead of blocking the whole screen.
+      const [menuData, codesData] = await Promise.all([
+        getMenuItems(),
+        getDiscountCodes().catch(() => []),
+      ]);
+      setItems(menuData);
+      setAllCodes(codesData);
     } catch {
       setError('Veriler yüklenemedi. Lütfen tekrar deneyin.');
     } finally {
@@ -269,9 +289,10 @@ export default function DealsScreen() {
   }
 
   const sections  = selectedRestaurant ? buildPlatformSections(selectedRestaurant) : [];
+  // restaurant_id null = platform-wide code, valid for every restaurant
   const codes     = selectedRestaurant
-    ? DISCOUNT_CODES.filter(
-        dc => dc.restaurant === selectedRestaurant.name || dc.restaurant === 'Tüm restoranlar'
+    ? allCodes.filter(
+        dc => dc.restaurant_id === selectedRestaurant.id || dc.restaurant_id == null
       )
     : [];
 
@@ -406,8 +427,14 @@ export default function DealsScreen() {
                 <View style={{ marginTop: 28, marginBottom: 12, paddingHorizontal: 20 }}>
                   <Text style={s.sectionLabel}>İNDİRİM KODLARI</Text>
                 </View>
-                {codes.map((dc, idx) => (
-                  <CodeCard key={idx} dc={dc} copied={copied} onCopy={copyCode} />
+                {codes.map(dc => (
+                  <CodeCard
+                    key={dc.id}
+                    dc={dc}
+                    restaurantName={dc.restaurant_id == null ? 'Tüm restoranlar' : selectedRestaurant.name}
+                    copied={copied}
+                    onCopy={copyCode}
+                  />
                 ))}
               </>
             )}
@@ -520,6 +547,8 @@ const s = StyleSheet.create({
   codePlatform:   { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.textPrimary },
   codeRestaurant: { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
   codeString:     { fontFamily: 'Courier', fontSize: 16, fontWeight: '700', color: colors.textPrimary, letterSpacing: 1 },
+  codeTitle:      { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.textPrimary, lineHeight: 19 },
+  codeScoped:     { fontFamily: fonts.bodyReg, fontSize: 11, color: '#b26a00', marginTop: 4 },
   codeRight:      { alignItems: 'flex-end', gap: 4 },
   codeLabel:      { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
   codeDetail:     { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary },

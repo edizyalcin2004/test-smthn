@@ -1,13 +1,12 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, SectionList, Pressable, ScrollView,
-  ActivityIndicator, StyleSheet, Platform,
+  ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radii, shadows } from '../../theme/tokens';
-
-const API = 'https://pryce-backend-production.up.railway.app';
+import { getMenu, compareBasket } from '../../api/client';
 
 export default function MenuScreen({ route, navigation }) {
   const { restaurant } = route.params;
@@ -18,20 +17,23 @@ export default function MenuScreen({ route, navigation }) {
   const [comparing, setComparing] = useState(false);
   const [results, setResults]     = useState(null);
   const [error, setError]         = useState(null);
+  const mounted                   = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res  = await fetch(`${API}/menu?restaurant_id=${restaurant.id}`);
-        const data = await res.json();
-        const items = data.items ?? data ?? [];
-        if (!cancelled) setSections(groupByCategory(items));
-      } catch { if (!cancelled) setError('Could not load menu. Please go back and try again.'); }
-      finally  { if (!cancelled) setLoading(false); }
-    })();
-    return () => { cancelled = true; };
+  const loadMenu = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const items = await getMenu(restaurant.id);
+      if (mounted.current) setSections(groupByCategory(items));
+    } catch {
+      if (mounted.current) setError('Could not load menu. Check your connection.');
+    } finally {
+      if (mounted.current) setLoading(false);
+    }
   }, [restaurant.id]);
+
+  useEffect(() => { loadMenu(); }, [loadMenu]);
 
   const addItem = useCallback((item) => {
     setBasket(prev => ({
@@ -55,19 +57,17 @@ export default function MenuScreen({ route, navigation }) {
     setComparing(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/compare-basket`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          restaurant_id: restaurant.id,
-          items: basketLines.map(({ item, qty }) => ({ id: item.id, name: item.name, qty })),
-        }),
-      });
-      const data = await res.json();
-      const sorted = (data.platforms ?? data ?? []).sort((a, b) => a.total - b.total);
-      setResults(sorted);
-    } catch { setError('Something went wrong. Please try again.'); }
-    finally  { setComparing(false); }
+      // Response is already ranked by total ascending — rendered as returned.
+      const ranked = await compareBasket(
+        restaurant.id,
+        basketLines.map(({ item, qty }) => ({ id: item.id, name: item.name, qty })),
+      );
+      if (mounted.current) setResults(ranked);
+    } catch {
+      if (mounted.current) setError('Comparison failed. Check your connection and try again.');
+    } finally {
+      if (mounted.current) setComparing(false);
+    }
   }, [basketLines, restaurant.id]);
 
   const resetResults = useCallback(() => {
@@ -103,9 +103,12 @@ export default function MenuScreen({ route, navigation }) {
         <View style={s.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : error ? (
+      ) : error && sections.length === 0 ? (
         <View style={s.center}>
           <Text style={s.errorText}>{error}</Text>
+          <Pressable style={s.retryBtn} onPress={loadMenu}>
+            <Text style={s.retryText}>Try again</Text>
+          </Pressable>
         </View>
       ) : sections.length === 0 ? (
         <View style={s.center}>
@@ -114,7 +117,7 @@ export default function MenuScreen({ route, navigation }) {
       ) : (
         <SectionList
           sections={sections}
-          keyExtractor={(item, i) => String(item.id ?? i)}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={[s.listPad, basketCount > 0 && s.listPadBasket]}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section: { title } }) => (
@@ -126,9 +129,6 @@ export default function MenuScreen({ route, navigation }) {
               <View style={s.menuCard}>
                 <View style={s.menuMeta}>
                   <Text style={s.menuName}>{item.name}</Text>
-                  {item.description ? (
-                    <Text style={s.menuDesc} numberOfLines={2}>{item.description}</Text>
-                  ) : null}
                   {item.price != null ? (
                     <Text style={s.menuPrice}>₺{Number(item.price).toFixed(2)}</Text>
                   ) : null}
@@ -154,7 +154,7 @@ export default function MenuScreen({ route, navigation }) {
         />
       )}
 
-      {error && !loading ? <Text style={s.errorBanner}>{error}</Text> : null}
+      {error && !loading && sections.length > 0 ? <Text style={s.errorBanner}>{error}</Text> : null}
 
       {basketCount > 0 && !loading && (
         <View style={s.basketBar}>
@@ -185,28 +185,30 @@ function ResultsView({ results, onReset }) {
     <ScrollView contentContainerStyle={s.listPad}>
       <Text style={s.resultsHeading}>Best prices found</Text>
       {results.map((p, i) => {
-        const platformName = p.platform?.name ?? p.name ?? '';
+        const missing = (p.items ?? []).filter((it) => !it.found).length;
         return (
-          <View key={String(i)} style={[s.platformCard, i === 0 && s.platformCardWin]}>
+          <View key={String(p.platform.id)} style={[s.platformCard, i === 0 && s.platformCardWin]}>
             {i === 0 && <Text style={s.winBadge}>EN UCUZ</Text>}
             <View style={s.platformRow}>
               <Text style={[s.platformName, i === 0 && s.onWin]}>
-                {platformName}
+                {p.platform.name}
               </Text>
               <Text style={[s.platformTotal, i === 0 && s.onWin]}>
                 ₺{Number(p.total).toFixed(2)}
               </Text>
             </View>
-            {p.delivery_fee != null && (
-              <Text style={[s.platformDetail, i === 0 && s.onWinSub]}>
-                Teslimat: ₺{Number(p.delivery_fee).toFixed(2)}
-              </Text>
-            )}
             {(p.items ?? []).map((it, j) => (
               <Text key={String(j)} style={[s.platformDetail, i === 0 && s.onWinSub]}>
-                {String(it.name)}: ₺{Number(it.price).toFixed(2)}
+                {it.found && it.price != null
+                  ? `${it.name}: ₺${Number(it.price).toFixed(2)}`
+                  : `${it.name}: bu platformda bulunamadı`}
               </Text>
             ))}
+            {missing > 0 && (
+              <Text style={[s.platformCaveat, i === 0 && s.onWinSub]}>
+                {missing} ürün bulunamadı — toplama dahil değil
+              </Text>
+            )}
           </View>
         );
       })}
@@ -220,7 +222,7 @@ function ResultsView({ results, onReset }) {
 function groupByCategory(items) {
   const map = new Map();
   for (const item of items) {
-    const cat = item.category ?? item.category_name ?? 'Diğer';
+    const cat = item.category ?? 'Diğer';
     if (!map.has(cat)) map.set(cat, []);
     map.get(cat).push(item);
   }
@@ -238,6 +240,8 @@ const s = StyleSheet.create({
   emptyText: { fontFamily: fonts.bodyReg, fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
   errorText: { fontFamily: fonts.bodyReg, fontSize: 14, color: '#c62828', textAlign: 'center' },
   errorBanner: { fontFamily: fonts.bodyReg, fontSize: 13, color: '#c62828', textAlign: 'center', paddingHorizontal: 20, paddingBottom: 6 },
+  retryBtn:  { marginTop: 14, paddingVertical: 10, paddingHorizontal: 22, borderRadius: radii.pill, backgroundColor: colors.surface },
+  retryText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
 
   listPad:       { padding: 16, paddingBottom: 32 },
   listPadBasket: { paddingBottom: 120 },
@@ -247,7 +251,6 @@ const s = StyleSheet.create({
   menuCard:     { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16, padding: 16 },
   menuMeta:     { flex: 1, marginRight: 12 },
   menuName:     { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.textPrimary },
-  menuDesc:     { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, marginTop: 3, lineHeight: 18 },
   menuPrice:    { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary, marginTop: 6 },
   menuControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   qtyBtn:       { width: 32, height: 32, borderRadius: radii.pill, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
@@ -278,6 +281,7 @@ const s = StyleSheet.create({
   platformTotal:     { fontFamily: fonts.headline, fontSize: 24, color: colors.textPrimary },
   onWin:             { color: '#fff' },
   platformDetail:    { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, marginTop: 5 },
+  platformCaveat:    { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.textSecondary, marginTop: 8 },
   onWinSub:          { color: 'rgba(255,255,255,0.75)' },
 
   resetBtn:   { alignSelf: 'center', marginTop: 20, paddingVertical: 12, paddingHorizontal: 24 },

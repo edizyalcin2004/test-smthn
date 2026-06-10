@@ -6,35 +6,53 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radii } from '../../theme/tokens';
-
-const API = 'https://pryce-backend-production.up.railway.app';
+import { searchRestaurants } from '../../api/client';
 
 export default function SearchScreen({ navigation }) {
-  const [query, setQuery]             = useState('');
-  const [results, setResults]         = useState([]);
-  const [searching, setSearching]     = useState(false);
-  const [error, setError]             = useState(null);
-  const debounce                      = useRef(null);
+  const [query, setQuery]                   = useState('');
+  const [results, setResults]               = useState([]);
+  const [searching, setSearching]           = useState(false);
+  const [error, setError]                   = useState(null);
+  // last query whose response landed — gates the "no results" empty state
+  const [completedQuery, setCompletedQuery] = useState(null);
+  const debounce                            = useRef(null);
+  const requestSeq                          = useRef(0);
+
+  const runSearch = useCallback(async (text) => {
+    const seq = ++requestSeq.current;
+    setSearching(true);
+    setError(null);
+    try {
+      const data = await searchRestaurants(text);
+      if (seq !== requestSeq.current) return; // stale response — a newer query is in flight
+      setResults(data);
+      setCompletedQuery(text);
+    } catch {
+      if (seq !== requestSeq.current) return;
+      setError('Search failed. Check your connection.');
+      setResults([]);
+      setCompletedQuery(null);
+    } finally {
+      if (seq === requestSeq.current) setSearching(false);
+    }
+  }, []);
 
   const onChangeText = useCallback((text) => {
     setQuery(text);
     setError(null);
+    setCompletedQuery(null);
     clearTimeout(debounce.current);
-    if (!text.trim()) { setResults([]); return; }
-    debounce.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res  = await fetch(`${API}/search?q=${encodeURIComponent(text)}`);
-        const data = await res.json();
-        setResults(data.restaurants ?? data ?? []);
-      } catch { setError('Search failed. Check your connection.'); setResults([]); }
-      finally  { setSearching(false); }
-    }, 400);
-  }, []);
+    if (!text.trim()) { requestSeq.current++; setResults([]); setSearching(false); return; }
+    debounce.current = setTimeout(() => runSearch(text), 400);
+  }, [runSearch]);
 
   const pickRestaurant = useCallback((r) => {
     navigation.navigate('Menu', { restaurant: r });
   }, [navigation]);
+
+  const showNoResults =
+    !searching && !error && results.length === 0 &&
+    query.trim().length > 0 && completedQuery === query;
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -56,7 +74,7 @@ export default function SearchScreen({ navigation }) {
             ? <ActivityIndicator size="small" color={colors.primary} />
             : query.length > 0
               ? (
-                <Pressable hitSlop={8} onPress={() => { setQuery(''); setResults([]); }}>
+                <Pressable hitSlop={8} onPress={() => onChangeText('')}>
                   <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
                 </Pressable>
               )
@@ -65,12 +83,19 @@ export default function SearchScreen({ navigation }) {
         </View>
       </View>
 
-      {error ? <Text style={s.error}>{error}</Text> : null}
+      {error ? (
+        <View style={s.errorWrap}>
+          <Text style={s.error}>{error}</Text>
+          <Pressable style={s.retryBtn} onPress={() => runSearch(query)}>
+            <Text style={s.retryText}>Try again</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {results.length > 0 ? (
         <FlatList
           data={results}
-          keyExtractor={(r, i) => String(r.id ?? i)}
+          keyExtractor={(r) => String(r.id)}
           contentContainerStyle={s.listPad}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item: r }) => (
@@ -80,13 +105,18 @@ export default function SearchScreen({ navigation }) {
               </View>
               <View style={s.rowMeta}>
                 <Text style={s.rowName}>{r.name}</Text>
-                {r.cuisine ? <Text style={s.rowSub}>{r.cuisine}</Text> : null}
+                {r.cuisine_type ? <Text style={s.rowSub}>{r.cuisine_type}</Text> : null}
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
             </Pressable>
           )}
           ItemSeparatorComponent={() => <View style={s.sep} />}
         />
+      ) : showNoResults ? (
+        <View style={s.empty}>
+          <Ionicons name="search-outline" size={52} color={colors.textSecondary} style={{ opacity: 0.3 }} />
+          <Text style={s.emptyText}>No restaurants found for “{query.trim()}”</Text>
+        </View>
       ) : !searching && query.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="scale-outline" size={52} color={colors.textSecondary} style={{ opacity: 0.3 }} />
@@ -123,5 +153,9 @@ const s = StyleSheet.create({
 
   empty:      { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText:  { fontFamily: fonts.bodyReg, fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginTop: 14, lineHeight: 22 },
-  error:      { fontFamily: fonts.bodyReg, fontSize: 13, color: '#c62828', textAlign: 'center', paddingBottom: 8 },
+
+  errorWrap:  { alignItems: 'center', paddingBottom: 8 },
+  error:      { fontFamily: fonts.bodyReg, fontSize: 13, color: '#c62828', textAlign: 'center' },
+  retryBtn:   { paddingVertical: 8, paddingHorizontal: 18 },
+  retryText:  { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
 });

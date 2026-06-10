@@ -52,8 +52,12 @@ export function getMenu(restaurantId) {
 // applies, raw total otherwise):
 // {platform: {id, name, hex_color}, items: [{name, price|null, found}],
 //  total: "string",
-//  best_code: {code, title, discount_type, discount_value, minimum_order} | null,
+//  best_code: {code, title, discount_type, discount_value, minimum_order,
+//              usage_limit} | null,
 //  total_after_code: "string" | null}
+// best_code.usage_limit is non-null only for "once_per_user" (the code still
+// applies — any user qualifies once — but the caveat MUST be shown).
+// "first_order" and free-text limits are never auto-applied backend-side.
 // A found:false item's price is null AND excluded from that platform's
 // total — callers must surface it as unavailable, never as a number.
 // best_code is null unless EVERY condition is verifiably met backend-side;
@@ -78,9 +82,12 @@ export function getMenuItems() {
 // {id, platform: {id, name, hex_color}, restaurant_id, code: "" for
 //  codeless campaigns, title, discount_type: "fixed"|"percentage",
 //  discount_value: "string", minimum_order: "string"|null,
-//  expiry_date, item_scoped, scraped_at}
+//  expiry_date, item_scoped, requires_membership: "YS Pro"|null,
+//  usage_limit: "once_per_user"|"first_order"|free text|null, scraped_at}
 // item_scoped:true means the discount only applies to specific products —
 // show it, but never present it as guaranteed for an arbitrary basket.
+// requires_membership and usage_limit are display-only conditions: always
+// surface them so the user knows whether they qualify.
 export function getDiscountCodes(restaurantId) {
   const query = restaurantId != null ? `?restaurant_id=${restaurantId}` : '';
   return request(`/discount-codes${query}`);

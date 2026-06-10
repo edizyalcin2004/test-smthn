@@ -215,6 +215,11 @@ function ResultsView({ results, onReset }) {
                 {'  ·  '}−₺{(Number(p.total) - Number(p.total_after_code)).toFixed(2)}
               </Text>
             )}
+            {hasCode && p.best_code.usage_limit != null && (
+              <Text style={[s.codeCaveat, i === 0 && s.onWinSub]}>
+                · {usageLimitCaveat(p.best_code.usage_limit)}
+              </Text>
+            )}
             {(p.items ?? []).map((it, j) => (
               <Text key={String(j)} style={[s.platformDetail, i === 0 && s.onWinSub]}>
                 {it.found && it.price != null
@@ -235,6 +240,15 @@ function ResultsView({ results, onReset }) {
       </Pressable>
     </ScrollView>
   );
+}
+
+// Caveat for a usage-limited best_code. The backend only auto-applies
+// "once_per_user"; other values are handled anyway so a future backend
+// change can't silently hide a condition from the user.
+function usageLimitCaveat(u) {
+  if (u === 'once_per_user') return 'kullanıcı başına 1 kez';
+  if (u === 'first_order') return 'ilk siparişe özel';
+  return u;
 }
 
 function groupByCategory(items) {
@@ -300,6 +314,7 @@ const s = StyleSheet.create({
   totalCol:          { alignItems: 'flex-end' },
   totalStruck:       { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, textDecorationLine: 'line-through' },
   codeApplied:       { fontFamily: fonts.bodySemi, fontSize: 12, color: '#2e7d32', marginTop: 6 },
+  codeCaveat:        { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   onWin:             { color: '#fff' },
   platformDetail:    { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, marginTop: 5 },
   platformCaveat:    { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.textSecondary, marginTop: 8 },

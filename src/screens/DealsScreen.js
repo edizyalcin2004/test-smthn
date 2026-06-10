@@ -37,6 +37,15 @@ function discountLabel(dc) {
   return null;
 }
 
+// Display text for a usage limit; known keys get fixed Turkish labels,
+// anything else is an admin-entered note rendered as-is.
+function usageLimitLabel(u) {
+  if (!u) return null;
+  if (u === 'once_per_user') return 'Kullanıcı başına 1';
+  if (u === 'first_order') return 'İlk siparişe özel';
+  return u;
+}
+
 function calcBangForBuck(items) {
   const results = [];
   const exclusives = items.filter(i => i.category === 'Özel Menüler' && i.description);
@@ -131,6 +140,7 @@ function CodeCard({ dc, restaurantName, copied, onCopy }) {
   const hasCode = !!dc.code;
   const label   = discountLabel(dc);
   const minOrder = dc.minimum_order != null ? `Min. ₺${fmt(dc.minimum_order)}` : null;
+  const limitLabel = usageLimitLabel(dc.usage_limit);
 
   return (
     <View style={[s.codeCard, { borderLeftColor: color }]}>
@@ -141,6 +151,20 @@ function CodeCard({ dc, restaurantName, copied, onCopy }) {
           <Text style={s.codeString}>{dc.code}</Text>
         ) : (
           <Text style={s.codeTitle}>{dc.title}</Text>
+        )}
+        {(dc.requires_membership || limitLabel) && (
+          <View style={s.codeBadgeRow}>
+            {dc.requires_membership && (
+              <View style={s.memberBadge}>
+                <Text style={s.memberBadgeText}>{dc.requires_membership}</Text>
+              </View>
+            )}
+            {limitLabel && (
+              <View style={s.limitBadge}>
+                <Text style={s.limitBadgeText}>{limitLabel}</Text>
+              </View>
+            )}
+          </View>
         )}
         {dc.item_scoped && (
           <Text style={s.codeScoped}>Belirli ürünlerde geçerli</Text>
@@ -549,6 +573,11 @@ const s = StyleSheet.create({
   codeString:     { fontFamily: 'Courier', fontSize: 16, fontWeight: '700', color: colors.textPrimary, letterSpacing: 1 },
   codeTitle:      { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.textPrimary, lineHeight: 19 },
   codeScoped:     { fontFamily: fonts.bodyReg, fontSize: 11, color: '#b26a00', marginTop: 4 },
+  codeBadgeRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  memberBadge:    { backgroundColor: '#ede7f6', borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  memberBadgeText:{ fontFamily: fonts.bodySemi, fontSize: 11, color: '#5D3EB2' },
+  limitBadge:     { backgroundColor: '#fff3e0', borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  limitBadgeText: { fontFamily: fonts.bodySemi, fontSize: 11, color: '#b26a00' },
   codeRight:      { alignItems: 'flex-end', gap: 4 },
   codeLabel:      { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
   codeDetail:     { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary },

@@ -6,24 +6,58 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radii } from '../theme/tokens';
+import { getMenuItems, getDiscountCodes } from '../api/client';
 
-const API = 'https://pryce-backend-production.up.railway.app';
+const PLATFORM_COLORS = {
+  'Yemeksepeti':              '#D6001C',
+  'Trendyol Yemek':          '#FF6000',
+  'Getir Yemek':             '#5D3EB2',
+  "McDonald's Türkiye Direct":'#FFC72C',
+};
 
-const DISCOUNT_CODES = [
-  { platform: 'Trendyol Yemek', color: '#FF6000', restaurant: "McDonald's", code: 'MCTREND15',  label: '%15 indirim', detail: 'Min. ₺150', discount_value: 15 },
-  { platform: 'Yemeksepeti',    color: '#D6001C', restaurant: "McDonald's", code: 'MCYEMEK10',  label: '%10 indirim', detail: 'Min. ₺100', discount_value: 10 },
-  { platform: 'Getir Yemek',    color: '#5D3EB2', restaurant: "McDonald's", code: 'GETIRMAC20', label: '₺20 indirim', detail: 'Min. ₺200', discount_value: 20 },
-  { platform: 'Trendyol Yemek', color: '#FF6000', restaurant: 'Komagene',   code: 'KOMATREND',  label: '%10 indirim', detail: 'Min. ₺150', discount_value: 10 },
-  { platform: 'Yemeksepeti',    color: '#D6001C', restaurant: 'Burger King', code: 'BKYEMEK15',  label: '%15 indirim', detail: 'Min. ₺150', discount_value: 15 },
-  { platform: 'Trendyol Yemek', color: '#FF6000', restaurant: 'Tüm restoranlar', code: 'TREND5TL', label: '₺5 indirim', detail: 'Min. ₺50', discount_value: 5 },
-];
-
-const TOP_CODES = [...DISCOUNT_CODES]
-  .sort((a, b) => b.discount_value - a.discount_value)
-  .slice(0, 3);
+// Hub is a discovery surface, so it previews a handful of live codes rather
+// than the full feed (that lives on DealsScreen).
+const CODE_PREVIEW_COUNT = 5;
 
 function fmt(val) {
   return Number(val).toFixed(2).replace('.', ',');
+}
+
+function platformColor(platformName, fallback) {
+  return PLATFORM_COLORS[platformName] || fallback || '#999';
+}
+
+// "₺100 indirim" / "%15 indirim" — null for unknown discount types (shown
+// without an amount rather than guessing).
+function discountLabel(dc) {
+  const val = Number(dc.discount_value);
+  if (!val || isNaN(val)) return null;
+  const amount = Number.isInteger(val) ? String(val) : fmt(val);
+  if (dc.discount_type === 'percentage') return `%${amount} indirim`;
+  if (dc.discount_type === 'fixed') return `₺${amount} indirim`;
+  return null;
+}
+
+// Display text for a usage limit; known keys get fixed Turkish labels,
+// anything else is an admin-entered note rendered as-is.
+function usageLimitLabel(u) {
+  if (!u) return null;
+  if (u === 'once_per_user') return 'Kullanıcı başına 1';
+  if (u === 'first_order') return 'İlk siparişe özel';
+  return u;
+}
+
+// Curated preview for "Günün Kodları": soonest-expiring first (an honest
+// urgency framing, NOT a "best discount" ranking — we never compare a fixed
+// ₺ code against a % code). Codes without an expiry date sort to the end.
+function previewCodes(codes) {
+  return [...codes]
+    .sort((a, b) => {
+      const ax = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+      const bx = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+      return ax - bx;
+    })
+    .slice(0, CODE_PREVIEW_COUNT);
 }
 
 function calcBangForBuck(items) {
@@ -104,28 +138,57 @@ function BfbCard({ result }) {
 }
 
 function CodeCard({ dc, copied, onCopy }) {
+  const color      = platformColor(dc.platform?.name, dc.platform?.hex_color);
+  const hasCode    = !!dc.code;
+  const label      = discountLabel(dc);
+  const minOrder   = dc.minimum_order != null ? `Min. ₺${fmt(dc.minimum_order)}` : null;
+  const limitLabel = usageLimitLabel(dc.usage_limit);
+
   return (
-    <View style={[s.codeCard, { borderLeftColor: dc.color }]}>
+    <View style={[s.codeCard, { borderLeftColor: color }]}>
       <View style={s.codeLeft}>
-        <View style={[s.codePlatformPill, { backgroundColor: dc.color }]}>
-          <Text style={s.codePlatformText}>{dc.platform}</Text>
+        <View style={[s.codePlatformPill, { backgroundColor: color }]}>
+          <Text style={s.codePlatformText}>{dc.platform?.name}</Text>
         </View>
-        <Text style={s.codeRestaurant}>{dc.restaurant}</Text>
-        <Text style={s.codeString}>{dc.code}</Text>
+        {dc.restaurantName && <Text style={s.codeRestaurant}>{dc.restaurantName}</Text>}
+        {hasCode ? (
+          <Text style={s.codeString}>{dc.code}</Text>
+        ) : (
+          <Text style={s.codeTitle}>{dc.title}</Text>
+        )}
+        {(dc.requires_membership || limitLabel) && (
+          <View style={s.codeBadgeRow}>
+            {dc.requires_membership && (
+              <View style={s.memberBadge}>
+                <Text style={s.memberBadgeText}>{dc.requires_membership}</Text>
+              </View>
+            )}
+            {limitLabel && (
+              <View style={s.limitBadge}>
+                <Text style={s.limitBadgeText}>{limitLabel}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        {dc.item_scoped && (
+          <Text style={s.codeScoped}>Belirli ürünlerde geçerli</Text>
+        )}
       </View>
       <View style={s.codeRight}>
-        <Text style={s.codeLabel}>{dc.label}</Text>
-        <Text style={s.codeDetail}>{dc.detail}</Text>
-        <Pressable style={s.copyBtn} onPress={() => onCopy(dc.code)}>
-          {copied === dc.code ? (
-            <Text style={s.copyBtnText}>Kopyalandı!</Text>
-          ) : (
-            <View style={s.copyRow}>
-              <Ionicons name="copy-outline" size={13} color={colors.primary} />
-              <Text style={s.copyBtnText}> Kopyala</Text>
-            </View>
-          )}
-        </Pressable>
+        {label && <Text style={s.codeLabel}>{label}</Text>}
+        {minOrder && <Text style={s.codeDetail}>{minOrder}</Text>}
+        {hasCode && (
+          <Pressable style={s.copyBtn} onPress={() => onCopy(dc.code)}>
+            {copied === dc.code ? (
+              <Text style={s.copyBtnText}>Kopyalandı!</Text>
+            ) : (
+              <View style={s.copyRow}>
+                <Ionicons name="copy-outline" size={13} color={colors.primary} />
+                <Text style={s.copyBtnText}> Kopyala</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -135,6 +198,7 @@ function CodeCard({ dc, copied, onCopy }) {
 
 export default function HubScreen({ navigation }) {
   const [items, setItems]     = useState([]);
+  const [codes, setCodes]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [copied, setCopied]   = useState(null);
@@ -143,10 +207,14 @@ export default function HubScreen({ navigation }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/menu-items`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setItems(data);
+      // Codes are nice-to-have — a failure there degrades to an empty list
+      // instead of blocking the whole screen.
+      const [menuData, codesData] = await Promise.all([
+        getMenuItems(),
+        getDiscountCodes().catch(() => []),
+      ]);
+      setItems(menuData);
+      setCodes(codesData);
     } catch {
       setError('Veriler yüklenemedi. Lütfen tekrar deneyin.');
     } finally {
@@ -189,6 +257,19 @@ export default function HubScreen({ navigation }) {
 
   const bfbResults = calcBangForBuck(items);
 
+  // /discount-codes only carries restaurant_id, so resolve display names from
+  // the menu-items we already loaded. restaurant_id null = platform-wide.
+  const restaurantNameById = {};
+  for (const it of items) {
+    if (it.restaurant?.id != null) restaurantNameById[it.restaurant.id] = it.restaurant.name;
+  }
+  const topCodes = previewCodes(codes).map(dc => ({
+    ...dc,
+    restaurantName: dc.restaurant_id == null
+      ? 'Tüm restoranlar'
+      : (restaurantNameById[dc.restaurant_id] ?? null),
+  }));
+
   return (
     <SafeAreaView edges={['top']} style={s.safeArea}>
       <Text style={s.wordmark}>Pryce</Text>
@@ -225,9 +306,13 @@ export default function HubScreen({ navigation }) {
         {/* Discount codes section */}
         <Text style={s.sectionLabel}>🎟 Günün Kodları</Text>
 
-        {TOP_CODES.map((dc, idx) => (
-          <CodeCard key={idx} dc={dc} copied={copied} onCopy={copyCode} />
-        ))}
+        {topCodes.length > 0 ? (
+          topCodes.map(dc => (
+            <CodeCard key={dc.id} dc={dc} copied={copied} onCopy={copyCode} />
+          ))
+        ) : (
+          <Text style={s.emptyText}>Şu anda aktif kod bulunamadı.</Text>
+        )}
 
         <View style={s.bottomSpacer} />
       </ScrollView>
@@ -387,6 +472,14 @@ const s = StyleSheet.create({
   codePlatformText: { fontFamily: fonts.bodySemi, fontSize: 10, color: '#ffffff' },
   codeRestaurant:   { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
   codeString:       { fontFamily: 'Courier', fontSize: 15, fontWeight: '700', color: colors.textPrimary, letterSpacing: 1 },
+  codeTitle:        { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.textPrimary, lineHeight: 19 },
+
+  codeScoped:      { fontFamily: fonts.bodyReg, fontSize: 11, color: '#b26a00', marginTop: 4 },
+  codeBadgeRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  memberBadge:     { backgroundColor: '#ede7f6', borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  memberBadgeText: { fontFamily: fonts.bodySemi, fontSize: 11, color: '#5D3EB2' },
+  limitBadge:      { backgroundColor: '#fff3e0', borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  limitBadgeText:  { fontFamily: fonts.bodySemi, fontSize: 11, color: '#b26a00' },
 
   codeLabel:  { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
   codeDetail: { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary },

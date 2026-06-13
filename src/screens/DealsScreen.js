@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator,
-  StyleSheet, Clipboard, TextInput,
+  StyleSheet, Clipboard, TextInput, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -196,6 +196,7 @@ export default function DealsScreen() {
   const [items, setItems]                 = useState([]);
   const [allCodes, setAllCodes]           = useState([]);
   const [loading, setLoading]             = useState(true);
+  const [refreshing, setRefreshing]       = useState(false);
   const [error, setError]                 = useState(null);
   const [query, setQuery]                 = useState('');
   const [selectedRestaurant, setSelected] = useState(null);
@@ -213,8 +214,11 @@ export default function DealsScreen() {
         .slice(0, 3)
     : [];
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  // isRefresh drives the pull-to-refresh spinner instead of the full-screen
+  // loader — same single fetch path either way.
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     try {
       // Codes are nice-to-have — a failure there degrades to an empty list
@@ -228,11 +232,14 @@ export default function DealsScreen() {
     } catch {
       setError('Veriler yüklenemedi. Lütfen tekrar deneyin.');
     } finally {
-      setLoading(false);
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
     }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const onRefresh = useCallback(() => fetchData(true), [fetchData]);
 
   function handleQueryChange(text) {
     setQuery(text);
@@ -362,7 +369,19 @@ export default function DealsScreen() {
       </View>
 
       {/* ── Scrollable body ──────────────────────────────────────────────── */}
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
 
         {!selectedRestaurant ? (
           /* ── Default state ──────────────────────────────────────────── */

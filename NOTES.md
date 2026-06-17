@@ -106,3 +106,17 @@ Deals. McD + BK only. Live via `src/api/client.js`. No mock imports.
   Compare flow intact between commits instead of half-migrating now.
 - Verified: iOS bundle builds (HTTP 200, 7.1 MB), app runs in Simulator, no
   red-screen, no visible regression (CodeSheet renders only when opened).
+
+## Step 1 — Search rebuild ✅
+- `compare/SearchScreen.js` rebuilt in navy/gold. Fetches `getRestaurants()`,
+  filters to McDonald's + Burger King (`inScope`), renders "Yakındaki
+  restoranlar" Card list with `restaurantBrand` tiles + cuisine_type.
+- Search box filters the list client-side (name/cuisine). Loading / error
+  (+Tekrar dene) / "Sonuç bulunamadı" states.
+- No fabricated ratings (backend returns none) → chevron instead of stars.
+- Cuisines grid omitted (its data is mock; out of scope).
+- Still `navigation.navigate('Menu', { restaurant })` — compatible with current
+  stack + CodeSheet deep-link. Basket-lift comes in Step 2.
+- Verified in Simulator: shows McD + BK only (Komagene correctly excluded),
+  live data. Screenshot confirmed. (Temp `initialRouteName="Compare"` used to
+  view the tab, then reverted.)

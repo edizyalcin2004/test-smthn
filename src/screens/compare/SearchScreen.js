@@ -1,161 +1,130 @@
-import { useState, useCallback, useRef } from 'react';
-import {
-  View, Text, TextInput, Pressable,
-  ActivityIndicator, StyleSheet, Platform, FlatList,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radii } from '../../theme/tokens';
-import { searchRestaurants } from '../../api/client';
+// SearchScreen — navy/gold rebuild, wired live.
+// Lists the in-scope restaurants (McDonald's + Burger King) from /restaurants;
+// the search box filters that list client-side. No fabricated ratings — the
+// backend returns none, so we show a chevron instead.
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { T, font } from '../../theme/tokens';
+import { Screen, Card, Header, SectionHead, Brand } from '../../components/ui';
+import { Icon } from '../../components/icons';
+import { restaurantBrand } from '../../lib/brand';
+import { getRestaurants } from '../../api/client';
+
+// Scope guard: McDonald's + Burger King only (Komagene and anything else hidden).
+const inScope = (r) => {
+  const n = String(r?.name || '').toLowerCase();
+  return n.includes('mcdonald') || n.includes('burger king');
+};
 
 export default function SearchScreen({ navigation }) {
-  const [query, setQuery]                   = useState('');
-  const [results, setResults]               = useState([]);
-  const [searching, setSearching]           = useState(false);
-  const [error, setError]                   = useState(null);
-  // last query whose response landed — gates the "no results" empty state
-  const [completedQuery, setCompletedQuery] = useState(null);
-  const debounce                            = useRef(null);
-  const requestSeq                          = useRef(0);
+  const [all, setAll]         = useState([]);
+  const [q, setQ]             = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const mounted               = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
-  const runSearch = useCallback(async (text) => {
-    const seq = ++requestSeq.current;
-    setSearching(true);
+  const load = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try {
-      const data = await searchRestaurants(text);
-      if (seq !== requestSeq.current) return; // stale response — a newer query is in flight
-      setResults(data);
-      setCompletedQuery(text);
+      const data = await getRestaurants();
+      if (mounted.current) setAll((data || []).filter(inScope));
     } catch {
-      if (seq !== requestSeq.current) return;
-      setError('Search failed. Check your connection.');
-      setResults([]);
-      setCompletedQuery(null);
+      if (mounted.current) setError('Restoranlar yüklenemedi. Bağlantını kontrol et.');
     } finally {
-      if (seq === requestSeq.current) setSearching(false);
+      if (mounted.current) setLoading(false);
     }
   }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const onChangeText = useCallback((text) => {
-    setQuery(text);
-    setError(null);
-    setCompletedQuery(null);
-    clearTimeout(debounce.current);
-    if (!text.trim()) { requestSeq.current++; setResults([]); setSearching(false); return; }
-    debounce.current = setTimeout(() => runSearch(text), 400);
-  }, [runSearch]);
+  const list = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return all;
+    return all.filter((r) =>
+      String(r.name).toLowerCase().includes(needle) ||
+      String(r.cuisine_type || '').toLowerCase().includes(needle));
+  }, [all, q]);
 
-  const pickRestaurant = useCallback((r) => {
-    navigation.navigate('Menu', { restaurant: r });
-  }, [navigation]);
-
-  const showNoResults =
-    !searching && !error && results.length === 0 &&
-    query.trim().length > 0 && completedQuery === query;
+  const pick = useCallback((r) => navigation.navigate('Menu', { restaurant: r }), [navigation]);
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
-      <Text style={s.title}>Compare</Text>
+    <Screen>
+      <Header title="Restoran veya mutfak ara" />
 
-      <View style={s.searchWrap}>
+      <View style={s.searchRow}>
         <View style={s.searchBox}>
-          <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={s.icon} />
+          <Icon name="search" s={19} c={T.faint} />
           <TextInput
+            value={q}
+            onChangeText={setQ}
+            placeholder="Restoran, yemek veya mutfak…"
+            placeholderTextColor={T.faint}
             style={s.input}
-            placeholder="Search restaurant…"
-            placeholderTextColor={colors.textSecondary}
-            value={query}
-            onChangeText={onChangeText}
-            returnKeyType="search"
             autoCorrect={false}
+            returnKeyType="search"
           />
-          {searching
-            ? <ActivityIndicator size="small" color={colors.primary} />
-            : query.length > 0
-              ? (
-                <Pressable hitSlop={8} onPress={() => onChangeText('')}>
-                  <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-                </Pressable>
-              )
-              : null
-          }
+          {q.length > 0 ? (
+            <Pressable hitSlop={8} onPress={() => setQ('')}><Icon name="x" s={16} c={T.faint} /></Pressable>
+          ) : null}
         </View>
       </View>
 
-      {error ? (
-        <View style={s.errorWrap}>
-          <Text style={s.error}>{error}</Text>
-          <Pressable style={s.retryBtn} onPress={() => runSearch(query)}>
-            <Text style={s.retryText}>Try again</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {results.length > 0 ? (
-        <FlatList
-          data={results}
-          keyExtractor={(r) => String(r.id)}
-          contentContainerStyle={s.listPad}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item: r }) => (
-            <Pressable style={({ pressed }) => [s.row, pressed && s.rowPressed]} onPress={() => pickRestaurant(r)}>
-              <View style={s.rowIcon}>
-                <Ionicons name="restaurant-outline" size={20} color={colors.primary} />
-              </View>
-              <View style={s.rowMeta}>
-                <Text style={s.rowName}>{r.name}</Text>
-                {r.cuisine_type ? <Text style={s.rowSub}>{r.cuisine_type}</Text> : null}
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-            </Pressable>
-          )}
-          ItemSeparatorComponent={() => <View style={s.sep} />}
-        />
-      ) : showNoResults ? (
-        <View style={s.empty}>
-          <Ionicons name="search-outline" size={52} color={colors.textSecondary} style={{ opacity: 0.3 }} />
-          <Text style={s.emptyText}>No restaurants found for “{query.trim()}”</Text>
-        </View>
-      ) : !searching && query.length === 0 ? (
-        <View style={s.empty}>
-          <Ionicons name="scale-outline" size={52} color={colors.textSecondary} style={{ opacity: 0.3 }} />
-          <Text style={s.emptyText}>Search for a restaurant{'\n'}to compare prices</Text>
-        </View>
-      ) : null}
-    </SafeAreaView>
+      <View style={s.section}>
+        <SectionHead title="Yakındaki restoranlar" />
+        {loading ? (
+          <Card style={s.stateCard}><ActivityIndicator color={T.blue} /></Card>
+        ) : error ? (
+          <Card style={s.stateCard}>
+            <Text style={s.errText}>{error}</Text>
+            <Pressable onPress={load} style={s.retry}><Text style={s.retryText}>Tekrar dene</Text></Pressable>
+          </Card>
+        ) : list.length === 0 ? (
+          <Card style={s.stateCard}><Text style={s.empty}>Sonuç bulunamadı</Text></Card>
+        ) : (
+          <Card pad={0}>
+            {list.map((r, i) => (
+              <Pressable
+                key={String(r.id)}
+                onPress={() => pick(r)}
+                style={({ pressed }) => [s.row, i ? s.rowBorder : null, pressed && s.rowPressed]}
+              >
+                <Brand brand={restaurantBrand(r)} size={46} radius={13} />
+                <View style={s.rowMeta}>
+                  <Text style={s.rowName} numberOfLines={1}>{r.name}</Text>
+                  {r.cuisine_type ? <Text style={s.rowSub} numberOfLines={1}>{r.cuisine_type}</Text> : null}
+                </View>
+                <Icon name="chevR" s={18} c={T.faint} sw={2.2} />
+              </Pressable>
+            ))}
+          </Card>
+        )}
+      </View>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  safe:       { flex: 1, backgroundColor: colors.background },
-  title:      { fontFamily: fonts.headline, fontSize: 28, color: colors.textPrimary, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 6 },
-
-  searchWrap: { paddingHorizontal: 16, paddingBottom: 10 },
+  searchRow:  { paddingHorizontal: 20, paddingTop: 8 },
   searchBox:  {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 7,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: T.white, borderRadius: 14, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: T.line2,
   },
-  icon:       { marginRight: 8 },
-  input:      { flex: 1, fontFamily: fonts.bodyReg, fontSize: 15, color: colors.textPrimary },
+  input:      { flex: 1, fontFamily: font.semibold, fontSize: 14, color: T.ink, paddingVertical: 13 },
 
-  listPad:    { paddingHorizontal: 16 },
-  row:        { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 14, padding: 14 },
-  rowPressed: { opacity: 0.7 },
-  rowIcon:    { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  rowMeta:    { flex: 1 },
-  rowName:    { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.textPrimary },
-  rowSub:     { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  sep:        { height: 8 },
+  section:    { paddingHorizontal: 20, paddingTop: 24 },
 
-  empty:      { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyText:  { fontFamily: fonts.bodyReg, fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginTop: 14, lineHeight: 22 },
+  row:        { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 16 },
+  rowBorder:  { borderTopWidth: 1, borderTopColor: T.line },
+  rowPressed: { opacity: 0.6 },
+  rowMeta:    { flex: 1, minWidth: 0 },
+  rowName:    { fontSize: 15, fontFamily: font.extrabold, color: T.ink },
+  rowSub:     { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 2 },
 
-  errorWrap:  { alignItems: 'center', paddingBottom: 8 },
-  error:      { fontFamily: fonts.bodyReg, fontSize: 13, color: '#c62828', textAlign: 'center' },
-  retryBtn:   { paddingVertical: 8, paddingHorizontal: 18 },
-  retryText:  { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
+  stateCard:  { alignItems: 'center', paddingVertical: 28 },
+  empty:      { fontSize: 13.5, fontFamily: font.semibold, color: T.faint },
+  errText:    { fontSize: 13.5, fontFamily: font.semibold, color: T.coral, textAlign: 'center' },
+  retry:      { marginTop: 12, paddingVertical: 8, paddingHorizontal: 18 },
+  retryText:  { fontSize: 14, fontFamily: font.bold, color: T.blue },
 });

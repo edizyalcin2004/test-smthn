@@ -142,3 +142,31 @@ Deals. McD + BK only. Live via `src/api/client.js`. No mock imports.
   (McD/Trendyol/Yemeksepeti) with correct per-item bulunamadı and auto-contrast
   brand tiles. Real-data note: "Efsane İkili" item isn't found on ANY platform —
   good incomplete-row case for Step 3 to handle (comparable rows only).
+
+## Step 3 — Results honesty spec ✅ (the gated screen)
+- `compare/ResultsScreen.js` fully rebuilt. Splits rows into **comparable**
+  (every item found → like-for-like totals) vs **incomplete** (≥1 missing).
+  Winner/savings key off `comparable.length`, never raw row count:
+  - **≥2 comparable** → ranked cheapest-first; rank 1 = green EN UCUZ winner
+    card; savings = `max(comparable effective) − winner effective`, label
+    "En pahalı platforma göre ₺X tasarruf" (suppressed if 0).
+  - **1 comparable** → one neutral card; NO rank/badge/savings; blue note
+    "Bu restoran tek platformda satılıyor…".
+  - **0 comparable** → no winner; only the incomplete block + empty note.
+- **Incomplete platforms** render in a separate "BAZI ÜRÜNLER BULUNAMADI" block,
+  never ranked/badged, NO headline price, with "{n} ürün bulunamadı — toplam
+  karşılaştırmaya dahil edilmedi" caveat. (A truncated total can't read as
+  cheapest.)
+- Per-row code: only `best_code` (auto-applied by backend) → bolt + code/title
+  "uygulandı" + −₺delta, struck original price, `usage_limit` caveat. Tapping
+  opens the shared CodeSheet enriched with `platform` + `restaurant_id`. No
+  code → "Kod yok". No fabricated delivery/ETA (backend returns none).
+- Verified BOTH cases in Simulator with REAL backend data (temp seed, reverted):
+  - **Multi (McD, items 20-21):** winner McD ₺880 green EN UCUZ, savings ₺20 vs
+    Trendyol ₺900; Yemeksepeti correctly DEMOTED to incomplete block (missing
+    1 item, its partial ₺500 not ranked). ✓
+  - **Single (BK, items 0-1):** Yemeksepeti-only → lone neutral ₺660 card, note
+    shown, no rank/badge/savings. ✓ Honesty crux resolved.
+- Probed backend to source cases: `/compare-basket` McD start 0=3 comparable,
+  20=2 comparable+1 incomplete; BK=1 platform always (Yemeksepeti-only).
+- **Compare flow (Search→Menu→Results) now fully rebuilt + wired.** Next: Hub.

@@ -12,7 +12,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -23,11 +23,13 @@ import DealsScreen   from './src/screens/DealsScreen';
 import AccountScreen from './src/screens/AccountScreen';
 import ProScreen     from './src/screens/ProScreen';
 import TabBar        from './src/navigation/TabBar';
+import { CodeSheetProvider } from './src/components/CodeSheet';
 
 SplashScreen.preventAutoHideAsync();
 
 const Tab = createBottomTabNavigator();
 const AccountStack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 
 // Account tab hosts a stack so Pryce Pro can be pushed from Account.
 function AccountStackScreen() {
@@ -61,17 +63,19 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <Tab.Navigator
-          tabBar={(props) => <TabBar {...props} />}
-          screenOptions={{ headerShown: false }}
-        >
-          <Tab.Screen name="Hub"     component={HubScreen} />
-          <Tab.Screen name="Compare" component={CompareScreen} />
-          <Tab.Screen name="Budget"  component={BudgetScreen} />
-          <Tab.Screen name="Deals"   component={DealsScreen} />
-          <Tab.Screen name="Account" component={AccountStackScreen} />
-        </Tab.Navigator>
+      <NavigationContainer ref={navigationRef}>
+        <CodeSheetProvider navigationRef={navigationRef}>
+          <Tab.Navigator
+            tabBar={(props) => <TabBar {...props} />}
+            screenOptions={{ headerShown: false }}
+          >
+            <Tab.Screen name="Hub"     component={HubScreen} />
+            <Tab.Screen name="Compare" component={CompareScreen} />
+            <Tab.Screen name="Budget"  component={BudgetScreen} />
+            <Tab.Screen name="Deals"   component={DealsScreen} />
+            <Tab.Screen name="Account" component={AccountStackScreen} />
+          </Tab.Navigator>
+        </CodeSheetProvider>
       </NavigationContainer>
       <StatusBar style="dark" />
     </SafeAreaProvider>

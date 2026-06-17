@@ -41,6 +41,13 @@ export async function searchRestaurants(q) {
   return fallback.filter((r) => normalizeName(r.name).includes(target));
 }
 
+// GET /restaurants — all restaurants with nested menu + prices. Callers here
+// only read the top-level identity fields {id, name, cuisine_type, logo_url,
+// slug}; the nested menu is ignored. Thin wrapper — no data logic.
+export function getRestaurants() {
+  return request('/restaurants');
+}
+
 // GET /menu?restaurant_id= — bare array of
 // {id, name, category, price: "string", image_url}. No description field.
 export function getMenu(restaurantId) {

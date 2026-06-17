@@ -79,3 +79,30 @@ bare array, **already sorted by total ascending**:
   items as "bulunamadı" (never a number) plus a per-platform caveat that
   missing items are excluded from that total.
 - Zero visual/design changes beyond the new error/empty/unavailable texts.
+
+---
+
+# Frontend Session 2 — navy/gold rebuild wired live (2026-06-18)
+
+Plan: `FRONTEND_S2_PLAN.md`. Order: 0 infra → Search → Menu → Results → Hub →
+Deals. McD + BK only. Live via `src/api/client.js`. No mock imports.
+
+## Step 0 — shared infra ✅
+- `expo-clipboard@~8.0.8` installed (CodeSheet copy action).
+- `client.js`: added thin `getRestaurants()` wrapper for GET /restaurants
+  (additive only — no existing data logic touched).
+- `src/lib/brand.js`: `platformBrand` (bg from live `hex_color`, auto-contrast
+  fg), `restaurantBrand` (neutral navy tile), `shortLabel`. No fake brand data.
+- `src/components/CodeSheet.js`: `CodeSheetProvider` + `useCodeSheet()` →
+  app-level bottom-sheet Modal. Maps live /discount-codes fields; humanizes
+  discount/usage/expiry; Açıklama built only from real conditions
+  (requires_membership, item_scoped, usage_limit); copy via expo-clipboard;
+  "Restoranı karşılaştır" resolves restaurant_id via cached /restaurants and
+  deep-links to Compare→Menu (hidden if it can't resolve / id is null).
+- `App.js`: `navigationRef` + `CodeSheetProvider` inside NavigationContainer
+  around the Tab.Navigator.
+- **Refinement vs plan:** basket-lift to Compare-level state + Results route
+  deferred to Step 2 (Menu rebuild) — same edit surface; keeps the working
+  Compare flow intact between commits instead of half-migrating now.
+- Verified: iOS bundle builds (HTTP 200, 7.1 MB), app runs in Simulator, no
+  red-screen, no visible regression (CodeSheet renders only when opened).

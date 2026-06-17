@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Delivery bag icon">
+  <title>Delivery bag icon</title>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
+    </filter>
+  </defs>
+  
+  <g filter="url(#softShadow)">
+    <path d="M131 181h250l-25 226c-2 20-19 35-39 35H195c-20 0-37-15-39-35z" fill="#F6E4BE"></path>
+    <path d="M190 184c0-48 29-85 66-85s66 37 66 85" fill="none" stroke="#061B3A" stroke-width="18" stroke-linecap="round"></path>
+    <rect x="184" y="238" width="144" height="93" rx="24" fill="#FF7A1A"></rect>
+    <path d="M216 285h80" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round"></path>
+    <path d="M145 212h222" stroke="#FFFFFF" stroke-width="12" opacity=".55"></path>
+  </g>
+
+</svg>

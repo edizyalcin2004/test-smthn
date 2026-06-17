@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Burger menu icon">
+  <title>Burger menu icon</title>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
+    </filter>
+  </defs>
+  
+  <g filter="url(#softShadow)">
+    <path d="M75 292c8-52 54-86 112-86s104 34 112 86H75z" fill="#FFC857"></path>
+    <rect x="69" y="294" width="237" height="40" rx="20" fill="#4B2412"></rect>
+    <path d="M80 337c24-10 39-10 61 0s37 10 58 0 37-10 60 0 33 9 50 4v34H80z" fill="#2BAE66"></path>
+    <rect x="71" y="368" width="238" height="54" rx="27" fill="#FFC857"></rect>
+    <path d="M318 162h31l-20 168h-47zM359 179h30l-26 151h-42zM394 201h28l-35 129h-39z" fill="#FFD65A"></path>
+    <path d="M281 271h154l-24 151H306z" fill="#E94235"></path>
+    <path d="M337 106l-21 167" stroke="#061B3A" stroke-width="12" stroke-linecap="round"></path>
+    <path d="M295 238h141l-7 35H290z" fill="#FFFFFF" opacity=".92"></path>
+    <rect x="345" y="255" width="82" height="139" rx="14" fill="#FF5A4E"></rect>
+  </g>
+
+</svg>

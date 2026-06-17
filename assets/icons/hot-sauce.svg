@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hot sauce icon">
+  <title>Hot sauce icon</title>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
+    </filter>
+  </defs>
+  
+  <g filter="url(#softShadow)">
+    <path d="M221 98h70v62h-70z" fill="#F5A524"></path>
+    <path d="M203 153h106l25 242c2 20-14 37-34 37h-88c-20 0-36-17-34-37z" fill="#FF5A4E"></path>
+    <rect x="222" y="220" width="68" height="96" rx="20" fill="#FFF3DA"></rect>
+    <path d="M232 97h49" stroke="#061B3A" stroke-width="16" stroke-linecap="round"></path>
+    <path d="M217 187h78" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" opacity=".7"></path>
+  </g>
+
+</svg>

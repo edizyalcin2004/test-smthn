@@ -1,27 +1,27 @@
 import { useRef } from 'react';
-import { View, Text, Pressable, Animated, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radii, shadows } from '../theme/tokens';
+import { View, Text, Pressable, Animated, StyleSheet, Platform } from 'react-native';
+import { T, font } from '../theme/tokens';
+import { TabIcon } from '../components/icons';
 
+// route name -> design tab-icon glyph
 const TAB_ICONS = {
-  Hub:     { active: 'home',      inactive: 'home-outline' },
-  Compare: { active: 'scale',     inactive: 'scale-outline' },
-  Budget:  { active: 'wallet',    inactive: 'wallet-outline' },
-  Deals:   { active: 'pricetag', inactive: 'pricetag-outline' },
-  Account: { active: 'person',    inactive: 'person-outline' },
+  Hub:     'home',
+  Compare: 'compare',
+  Budget:  'budget',
+  Deals:   'deals',
+  Account: 'account',
 };
 
 function TabItem({ route, isFocused, descriptor, onPress, onLongPress }) {
   const scale = useRef(new Animated.Value(1)).current;
   const { options } = descriptor;
   const label = options.tabBarLabel ?? options.title ?? route.name;
-  const icons = TAB_ICONS[route.name];
+  const iconName = TAB_ICONS[route.name] ?? 'home';
 
   const pressIn = () =>
-    Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
-
+    Animated.spring(scale, { toValue: 0.94, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
   const pressOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 6 }).start();
 
   return (
     <Pressable
@@ -34,12 +34,8 @@ function TabItem({ route, isFocused, descriptor, onPress, onLongPress }) {
       onPressOut={pressOut}
       style={s.pressable}
     >
-      <Animated.View style={[s.item, isFocused && s.itemActive, { transform: [{ scale }] }]}>
-        <Ionicons
-          name={isFocused ? icons.active : icons.inactive}
-          size={22}
-          color={isFocused ? colors.tabActiveLabel : colors.tabInactiveIcon}
-        />
+      <Animated.View style={[s.item, { transform: [{ scale }] }]}>
+        <TabIcon name={iconName} active={isFocused} />
         <Text style={[s.label, isFocused ? s.labelActive : s.labelInactive]} numberOfLines={1}>
           {label}
         </Text>
@@ -50,70 +46,60 @@ function TabItem({ route, isFocused, descriptor, onPress, onLongPress }) {
 
 export default function TabBar({ state, descriptors, navigation, insets }) {
   return (
-    <View style={[s.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {state.routes.map((route, index) => {
-        const isFocused = state.index === index;
-        const descriptor = descriptors[route.key];
+    <View style={[s.outer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      <View style={s.pill}>
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const descriptor = descriptors[route.key];
 
-        const onPress = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate({ name: route.name, merge: true });
-          }
-        };
+          const onPress = () => {
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate({ name: route.name, merge: true });
+            }
+          };
+          const onLongPress = () => navigation.emit({ type: 'tabLongPress', target: route.key });
 
-        const onLongPress = () => navigation.emit({ type: 'tabLongPress', target: route.key });
-
-        return (
-          <TabItem
-            key={route.key}
-            route={route}
-            isFocused={isFocused}
-            descriptor={descriptor}
-            onPress={onPress}
-            onLongPress={onLongPress}
-          />
-        );
-      })}
+          return (
+            <TabItem
+              key={route.key}
+              route={route}
+              isFocused={isFocused}
+              descriptor={descriptor}
+              onPress={onPress}
+              onLongPress={onLongPress}
+            />
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.tabBarTop,
-    borderTopRightRadius: radii.tabBarTop,
-    paddingTop: 10,
-    paddingHorizontal: 8,
-    ...shadows.tabBar,
-  },
-  pressable: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  item: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
+  outer: {
+    backgroundColor: T.bg,
     paddingHorizontal: 14,
-    borderRadius: radii.pill,
-    minWidth: 60,
+    paddingTop: 8,
   },
-  itemActive: {
-    backgroundColor: colors.tabActivePill,
+  pill: {
+    backgroundColor: T.navy,
+    borderRadius: 26,
+    paddingHorizontal: 8,
+    paddingTop: 11,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: T.navy, shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.4, shadowRadius: 22 },
+      android: { elevation: 12 },
+      default: {},
+    }),
   },
-  label: {
-    fontSize: 11,
-    marginTop: 3,
-  },
-  labelActive: {
-    fontFamily: fonts.bodySemi,
-    color: colors.tabActiveLabel,
-  },
-  labelInactive: {
-    fontFamily: fonts.bodyReg,
-    color: colors.tabInactiveIcon,
-  },
+  pressable: { flex: 1, alignItems: 'center' },
+  item: { alignItems: 'center', justifyContent: 'center', paddingVertical: 2, paddingHorizontal: 6, gap: 4 },
+  label: { fontSize: 10.5, marginTop: 1 },
+  labelActive: { fontFamily: font.extrabold, color: '#fff' },
+  labelInactive: { fontFamily: font.semibold, color: 'rgba(255,255,255,0.5)' },
 });

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fries icon">
+  <title>Fries icon</title>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
+    </filter>
+  </defs>
+  
+  <g filter="url(#softShadow)">
+    <path d="M151 128h32l10 202h-50zM217 96h34l-4 234h-58zM285 118h36l-36 212h-50zM337 148h32l-53 182h-48z" fill="#FFD65A"></path>
+    <path d="M127 232h258l-29 184H156z" fill="#E94235"></path>
+    <path d="M145 261h222l-10 63c-64 18-136 18-202 0z" fill="#FF5A4E" opacity=".9"></path>
+    <ellipse cx="256" cy="233" rx="129" ry="24" fill="#E94235"></ellipse>
+    <path d="M178 288h156" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" opacity=".9"></path>
+  </g>
+
+</svg>

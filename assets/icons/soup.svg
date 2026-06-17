@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Soup icon">
+  <title>Soup icon</title>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
+    </filter>
+  </defs>
+  
+  <g filter="url(#softShadow)">
+    <path d="M99 248h314c-8 86-76 146-157 146S107 334 99 248z" fill="#FFFFFF" stroke="#D9E2F2" stroke-width="8"></path>
+    <ellipse cx="256" cy="246" rx="157" ry="44" fill="#FF5A4E"></ellipse>
+    <path d="M148 236c52 22 162 22 216 0" stroke="#FFC857" stroke-width="14" stroke-linecap="round" opacity=".7"></path>
+    <path d="M178 146c-21 31 28 36 2 67M249 134c-22 33 28 39 1 72M322 146c-22 31 27 37 2 67" stroke="#061B3A" stroke-width="14" stroke-linecap="round" opacity=".6"></path>
+  </g>
+
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Discount tag icon">
+  <title>Discount tag icon</title>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
+    </filter>
+  </defs>
+  
+  <g filter="url(#softShadow)">
+    <path d="M92 249L244 97h153c17 0 31 14 31 31v153L276 433c-16 16-42 16-58 0L92 307c-16-16-16-42 0-58z" fill="#2F66FF"></path>
+    <circle cx="358" cy="168" r="28" fill="#FFFFFF"></circle>
+    <path d="M196 333l127-127" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"></path>
+    <circle cx="205" cy="221" r="23" fill="#FFFFFF"></circle>
+    <circle cx="314" cy="330" r="23" fill="#FFFFFF"></circle>
+  </g>
+
+</svg>

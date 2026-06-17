@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Drink icon">
+  <title>Drink icon</title>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
+    </filter>
+  </defs>
+  
+  <g filter="url(#softShadow)">
+    <path d="M187 156h169l-26 256H210z" fill="#FF5A4E"></path>
+    <path d="M173 123h199c10 0 19 9 19 19s-9 19-19 19H173c-10 0-19-9-19-19s9-19 19-19z" fill="#FFFFFF" stroke="#D9E2F2" stroke-width="8"></path>
+    <path d="M321 72l-40 67" stroke="#061B3A" stroke-width="15" stroke-linecap="round"></path>
+    <path d="M216 198h93" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"></path>
+    <path d="M210 156h132l-15 150c-45 9-86 8-125-2z" fill="#FF7A1A" opacity=".35"></path>
+  </g>
+
+</svg>

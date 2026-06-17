@@ -1,325 +1,240 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+// MenuScreen — navy/gold rebuild, wired live. Reads /menu, builds a basket in
+// Compare-level state, then POSTs /compare-basket and navigates to Results.
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  View, Text, SectionList, Pressable, ScrollView,
-  ActivityIndicator, StyleSheet,
+  View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { T, font, money } from '../../theme/tokens';
+import { RoundBtn } from '../../components/ui';
+import { Icon } from '../../components/icons';
+import Food from '../../components/Food';
+import { foodIconFor } from '../../lib/foodIcon';
 import { getMenu, compareBasket } from '../../api/client';
+import { useCompare } from '../CompareScreen';
+
+const ALL = 'Tümü';
 
 export default function MenuScreen({ route, navigation }) {
-  const { restaurant } = route.params;
+  const insets = useSafeAreaInsets();
+  const { restaurant: ctxRestaurant, setRestaurant, basket, setQty, setResults } = useCompare();
+  const restaurant = route.params?.restaurant ?? ctxRestaurant;
 
-  const [sections, setSections]   = useState([]);
-  const [basket, setBasket]       = useState({});
-  const [loading, setLoading]     = useState(true);
+  // Reconcile Compare-level restaurant with whatever we navigated in with
+  // (covers both Search picks and CodeSheet deep-links). Resets basket on change.
+  useEffect(() => {
+    if (restaurant && (!ctxRestaurant || ctxRestaurant.id !== restaurant.id)) {
+      setRestaurant(restaurant);
+    }
+  }, [restaurant, ctxRestaurant, setRestaurant]);
+
+  const [items, setItems]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
   const [comparing, setComparing] = useState(false);
-  const [results, setResults]     = useState(null);
-  const [error, setError]         = useState(null);
-  const mounted                   = useRef(true);
+  const [tab, setTab]           = useState(ALL);
+  const [fav, setFav]           = useState(false);
+  const mounted                 = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
 
-  const loadMenu = useCallback(async () => {
+  const load = useCallback(async () => {
+    if (!restaurant) return;
     setLoading(true);
     setError(null);
     try {
-      const items = await getMenu(restaurant.id);
-      if (mounted.current) setSections(groupByCategory(items));
+      const data = await getMenu(restaurant.id);
+      if (mounted.current) setItems(data || []);
     } catch {
-      if (mounted.current) setError('Could not load menu. Check your connection.');
+      if (mounted.current) setError('Menü yüklenemedi. Bağlantını kontrol et.');
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [restaurant.id]);
+  }, [restaurant]);
+  useEffect(() => { load(); }, [load]);
 
-  useEffect(() => { loadMenu(); }, [loadMenu]);
+  const tabs = useMemo(() => {
+    const cats = [];
+    for (const it of items) {
+      const c = it.category || 'Diğer';
+      if (!cats.includes(c)) cats.push(c);
+    }
+    return [ALL, ...cats];
+  }, [items]);
 
-  const addItem = useCallback((item) => {
-    setBasket(prev => ({
-      ...prev,
-      [item.id]: { item, qty: (prev[item.id]?.qty ?? 0) + 1 },
-    }));
-  }, []);
-
-  const removeItem = useCallback((id) => {
-    setBasket(prev => {
-      if ((prev[id]?.qty ?? 0) <= 1) { const n = { ...prev }; delete n[id]; return n; }
-      return { ...prev, [id]: { ...prev[id], qty: prev[id].qty - 1 } };
-    });
-  }, []);
+  const visible = useMemo(
+    () => (tab === ALL ? items : items.filter((it) => (it.category || 'Diğer') === tab)),
+    [items, tab],
+  );
 
   const basketLines = useMemo(() => Object.values(basket), [basket]);
-  const basketCount = useMemo(() => basketLines.reduce((s, { qty }) => s + qty, 0), [basketLines]);
+  const count = useMemo(() => basketLines.reduce((a, { qty }) => a + qty, 0), [basketLines]);
+  const total = useMemo(
+    () => basketLines.reduce((sum, { item, qty }) => sum + Number(item.price || 0) * qty, 0),
+    [basketLines],
+  );
 
-  const findBestPrice = useCallback(async () => {
-    if (!basketLines.length) return;
+  const compare = useCallback(async () => {
+    if (!basketLines.length || !restaurant) return;
     setComparing(true);
     setError(null);
     try {
-      // Response is already ranked by total ascending — rendered as returned.
+      // Response is already ranked by effective total ascending.
       const ranked = await compareBasket(
         restaurant.id,
         basketLines.map(({ item, qty }) => ({ id: item.id, name: item.name, qty })),
       );
-      if (mounted.current) setResults(ranked);
+      if (!mounted.current) return;
+      setResults(ranked);
+      navigation.navigate('Results');
     } catch {
-      if (mounted.current) setError('Comparison failed. Check your connection and try again.');
+      if (mounted.current) setError('Karşılaştırma başarısız. Bağlantını kontrol edip tekrar dene.');
     } finally {
       if (mounted.current) setComparing(false);
     }
-  }, [basketLines, restaurant.id]);
-
-  const resetResults = useCallback(() => {
-    setResults(null);
-    setBasket({});
-  }, []);
-
-  if (results) {
-    return (
-      <SafeAreaView style={s.safe} edges={['top']}>
-        <View style={s.header}>
-          <Pressable onPress={resetResults} hitSlop={10} style={s.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          </Pressable>
-          <Text style={s.headerTitle} numberOfLines={1}>Results</Text>
-        </View>
-        <ResultsView results={results} onReset={resetResults} />
-      </SafeAreaView>
-    );
-  }
+  }, [basketLines, restaurant, navigation, setResults]);
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={s.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.primary} />
-        </Pressable>
-        <Text style={s.headerTitle} numberOfLines={1}>{restaurant.name}</Text>
+    <View style={s.root}>
+      {/* header */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerLeft}>
+          <RoundBtn onPress={() => navigation.goBack()} size={40}><Icon name="back" s={20} c={T.ink} /></RoundBtn>
+          <Text style={s.title} numberOfLines={1}>{restaurant?.name ?? 'Menü'}</Text>
+        </View>
+        <RoundBtn onPress={() => setFav((f) => !f)} size={40}>
+          <Icon name="heart" s={20} c={fav ? T.coral : T.ink} sw={fav ? 0 : 1.9} />
+        </RoundBtn>
       </View>
 
+      {/* category tabs */}
+      {!loading && !error && items.length > 0 ? (
+        <View style={s.tabsWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsRow}>
+            {tabs.map((t) => {
+              const active = t === tab;
+              return (
+                <Pressable key={t} onPress={() => setTab(t)} style={[s.tab, active && s.tabActive]}>
+                  <Text style={[s.tabText, active && s.tabTextActive]} numberOfLines={1}>{t}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+
       {loading ? (
+        <View style={s.center}><ActivityIndicator size="large" color={T.blue} /></View>
+      ) : error && items.length === 0 ? (
         <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={s.errText}>{error}</Text>
+          <Pressable onPress={load} style={s.retry}><Text style={s.retryText}>Tekrar dene</Text></Pressable>
         </View>
-      ) : error && sections.length === 0 ? (
-        <View style={s.center}>
-          <Text style={s.errorText}>{error}</Text>
-          <Pressable style={s.retryBtn} onPress={loadMenu}>
-            <Text style={s.retryText}>Try again</Text>
-          </Pressable>
-        </View>
-      ) : sections.length === 0 ? (
-        <View style={s.center}>
-          <Text style={s.emptyText}>No menu items found</Text>
-        </View>
+      ) : items.length === 0 ? (
+        <View style={s.center}><Text style={s.empty}>Menü bulunamadı</Text></View>
       ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={[s.listPad, basketCount > 0 && s.listPadBasket]}
-          stickySectionHeadersEnabled={false}
-          renderSectionHeader={({ section: { title } }) => (
-            <Text style={s.sectionHeader}>{title}</Text>
-          )}
-          renderItem={({ item }) => {
-            const qty = basket[item.id]?.qty ?? 0;
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: count ? 160 : 110 }}
+        >
+          {visible.map((it, i) => {
+            const qty = basket[it.id]?.qty ?? 0;
             return (
-              <View style={s.menuCard}>
-                <View style={s.menuMeta}>
-                  <Text style={s.menuName}>{item.name}</Text>
-                  {item.price != null ? (
-                    <Text style={s.menuPrice}>₺{Number(item.price).toFixed(2)}</Text>
-                  ) : null}
+              <View key={String(it.id)} style={[s.itemRow, i < visible.length - 1 && s.itemBorder]}>
+                <View style={s.thumb}><Food name={foodIconFor(it.name, it.category)} s={42} /></View>
+                <View style={s.itemMeta}>
+                  <Text style={s.itemName} numberOfLines={2}>{it.name}</Text>
+                  {it.price != null ? <Text style={s.itemPrice}>{money(it.price)}</Text> : null}
                 </View>
-                <View style={s.menuControls}>
-                  {qty > 0 && (
-                    <>
-                      <Pressable style={s.qtyBtn} hitSlop={6} onPress={() => removeItem(item.id)}>
-                        <Ionicons name="remove" size={18} color={colors.primary} />
-                      </Pressable>
-                      <Text style={s.qtyLabel}>{qty}</Text>
-                    </>
-                  )}
-                  <Pressable style={s.addBtn} hitSlop={6} onPress={() => addItem(item)}>
-                    <Ionicons name="add" size={20} color="#fff" />
-                  </Pressable>
-                </View>
+                <Stepper
+                  qty={qty}
+                  onMinus={() => setQty(it, qty - 1)}
+                  onPlus={() => setQty(it, qty + 1)}
+                />
               </View>
             );
-          }}
-          SectionSeparatorComponent={() => <View style={{ height: 4 }} />}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        />
+          })}
+        </ScrollView>
       )}
 
-      {error && !loading && sections.length > 0 ? <Text style={s.errorBanner}>{error}</Text> : null}
+      {error && !loading && items.length > 0 ? <Text style={s.errBanner}>{error}</Text> : null}
 
-      {basketCount > 0 && !loading && (
-        <View style={s.basketBar}>
-          <View style={s.basketMeta}>
-            <Text style={s.basketCount}>{basketCount} item{basketCount !== 1 ? 's' : ''}</Text>
-            <Text style={s.basketSummary} numberOfLines={1}>
-              {basketLines.map(({ item, qty }) => `${item.name}${qty > 1 ? ` ×${qty}` : ''}`).join(', ')}
-            </Text>
-          </View>
+      {/* compare bar */}
+      {count > 0 && !loading ? (
+        <View style={[s.barWrap, { paddingBottom: insets.bottom + 12 }]}>
           <Pressable
-            style={({ pressed }) => [s.cta, pressed && s.ctaPressed, comparing && s.ctaDim]}
-            onPress={findBestPrice}
+            onPress={compare}
             disabled={comparing}
+            style={({ pressed }) => [s.bar, (pressed || comparing) && s.barDim]}
           >
-            {comparing
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={s.ctaText}>Find Best Price</Text>
-            }
+            <View style={s.barLeft}>
+              <View style={s.barCount}><Text style={s.barCountText}>{count}</Text></View>
+              <Text style={s.barLabel}>ürün · Sepeti karşılaştır</Text>
+            </View>
+            {comparing ? <ActivityIndicator color="#fff" /> : <Text style={s.barTotal}>{money(total)}</Text>}
           </Pressable>
         </View>
-      )}
-    </SafeAreaView>
+      ) : null}
+    </View>
   );
 }
 
-function ResultsView({ results, onReset }) {
-  return (
-    <ScrollView contentContainerStyle={s.listPad}>
-      <Text style={s.resultsHeading}>Best prices found</Text>
-      {results.map((p, i) => {
-        const missing = (p.items ?? []).filter((it) => !it.found).length;
-        // total_after_code is set only when the backend verified a code
-        // applies to this basket — that's the price the user actually pays.
-        const hasCode = p.total_after_code != null && p.best_code != null;
-        return (
-          <View key={String(p.platform.id)} style={[s.platformCard, i === 0 && s.platformCardWin]}>
-            {i === 0 && <Text style={s.winBadge}>EN UCUZ</Text>}
-            <View style={s.platformRow}>
-              <Text style={[s.platformName, i === 0 && s.onWin]}>
-                {p.platform.name}
-              </Text>
-              <View style={s.totalCol}>
-                {hasCode && (
-                  <Text style={[s.totalStruck, i === 0 && s.onWinSub]}>
-                    ₺{Number(p.total).toFixed(2)}
-                  </Text>
-                )}
-                <Text style={[s.platformTotal, i === 0 && s.onWin]}>
-                  ₺{Number(hasCode ? p.total_after_code : p.total).toFixed(2)}
-                </Text>
-              </View>
-            </View>
-            {hasCode && (
-              <Text style={[s.codeApplied, i === 0 && s.onWinSub]}>
-                {p.best_code.code
-                  ? `Kod uygulandı: ${p.best_code.code}`
-                  : `Kampanya: ${p.best_code.title}`}
-                {'  ·  '}−₺{(Number(p.total) - Number(p.total_after_code)).toFixed(2)}
-              </Text>
-            )}
-            {hasCode && p.best_code.usage_limit != null && (
-              <Text style={[s.codeCaveat, i === 0 && s.onWinSub]}>
-                · {usageLimitCaveat(p.best_code.usage_limit)}
-              </Text>
-            )}
-            {(p.items ?? []).map((it, j) => (
-              <Text key={String(j)} style={[s.platformDetail, i === 0 && s.onWinSub]}>
-                {it.found && it.price != null
-                  ? `${it.name}: ₺${Number(it.price).toFixed(2)}`
-                  : `${it.name}: bu platformda bulunamadı`}
-              </Text>
-            ))}
-            {missing > 0 && (
-              <Text style={[s.platformCaveat, i === 0 && s.onWinSub]}>
-                {missing} ürün bulunamadı — toplama dahil değil
-              </Text>
-            )}
-          </View>
-        );
-      })}
-      <Pressable style={s.resetBtn} onPress={onReset}>
-        <Text style={s.resetText}>Yeni karşılaştırma başlat</Text>
+function Stepper({ qty, onMinus, onPlus }) {
+  if (qty === 0) {
+    return (
+      <Pressable onPress={onPlus} style={s.addBtn} hitSlop={6}>
+        <Icon name="plus" s={18} c={T.blue} sw={2.4} />
       </Pressable>
-    </ScrollView>
-  );
-}
-
-// Caveat for a usage-limited best_code. The backend only auto-applies
-// "once_per_user"; other values are handled anyway so a future backend
-// change can't silently hide a condition from the user.
-function usageLimitCaveat(u) {
-  if (u === 'once_per_user') return 'kullanıcı başına 1 kez';
-  if (u === 'first_order') return 'ilk siparişe özel';
-  return u;
-}
-
-function groupByCategory(items) {
-  const map = new Map();
-  for (const item of items) {
-    const cat = item.category ?? 'Diğer';
-    if (!map.has(cat)) map.set(cat, []);
-    map.get(cat).push(item);
+    );
   }
-  return Array.from(map.entries()).map(([title, data]) => ({ title, data }));
+  return (
+    <View style={s.stepper}>
+      <Pressable onPress={onMinus} style={s.stepMinus} hitSlop={6}><Icon name="minus" s={16} c={T.ink} sw={2.4} /></Pressable>
+      <Text style={s.stepQty}>{qty}</Text>
+      <Pressable onPress={onPlus} style={s.stepPlus} hitSlop={6}><Icon name="plus" s={16} c="#fff" sw={2.4} /></Pressable>
+    </View>
+  );
 }
 
 const s = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: colors.background },
+  root:       { flex: 1, backgroundColor: T.bg },
 
-  header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8 },
-  backBtn:     { marginRight: 6, padding: 2 },
-  headerTitle: { fontFamily: fonts.headline, fontSize: 22, color: colors.textPrimary, flex: 1 },
+  header:     { paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
+  title:      { fontSize: 20, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.4, flexShrink: 1 },
 
-  center:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyText: { fontFamily: fonts.bodyReg, fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
-  errorText: { fontFamily: fonts.bodyReg, fontSize: 14, color: '#c62828', textAlign: 'center' },
-  errorBanner: { fontFamily: fonts.bodyReg, fontSize: 13, color: '#c62828', textAlign: 'center', paddingHorizontal: 20, paddingBottom: 6 },
-  retryBtn:  { marginTop: 14, paddingVertical: 10, paddingHorizontal: 22, borderRadius: radii.pill, backgroundColor: colors.surface },
-  retryText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
+  tabsWrap:   { paddingBottom: 12 },
+  tabsRow:    { paddingHorizontal: 18, gap: 8 },
+  tab:        { paddingVertical: 9, paddingHorizontal: 16, borderRadius: 999, backgroundColor: T.white, borderWidth: 1, borderColor: T.line2 },
+  tabActive:  { backgroundColor: T.navy, borderColor: T.navy },
+  tabText:    { fontSize: 13, fontFamily: font.bold, color: T.sub },
+  tabTextActive: { color: '#fff' },
 
-  listPad:       { padding: 16, paddingBottom: 32 },
-  listPadBasket: { paddingBottom: 120 },
+  center:     { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  empty:      { fontSize: 14, fontFamily: font.semibold, color: T.faint },
+  errText:    { fontSize: 14, fontFamily: font.semibold, color: T.coral, textAlign: 'center' },
+  errBanner:  { fontSize: 12.5, fontFamily: font.semibold, color: T.coral, textAlign: 'center', paddingHorizontal: 20, paddingBottom: 6 },
+  retry:      { marginTop: 14, paddingVertical: 10, paddingHorizontal: 22 },
+  retryText:  { fontSize: 14, fontFamily: font.bold, color: T.blue },
 
-  sectionHeader: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginTop: 8 },
+  itemRow:    { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14 },
+  itemBorder: { borderBottomWidth: 1, borderBottomColor: T.line },
+  thumb:      { width: 60, height: 60, borderRadius: 15, backgroundColor: T.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: T.line },
+  itemMeta:   { flex: 1, minWidth: 0 },
+  itemName:   { fontSize: 14.5, fontFamily: font.extrabold, color: T.ink, lineHeight: 19 },
+  itemPrice:  { fontSize: 14.5, fontFamily: font.extrabold, color: T.ink, marginTop: 6 },
 
-  menuCard:     { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16, padding: 16 },
-  menuMeta:     { flex: 1, marginRight: 12 },
-  menuName:     { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.textPrimary },
-  menuPrice:    { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary, marginTop: 6 },
-  menuControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  qtyBtn:       { width: 32, height: 32, borderRadius: radii.pill, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
-  qtyLabel:     { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.textPrimary, minWidth: 16, textAlign: 'center' },
-  addBtn:       { width: 36, height: 36, borderRadius: radii.pill, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  addBtn:     { width: 34, height: 34, borderRadius: 11, backgroundColor: T.blueSoft, alignItems: 'center', justifyContent: 'center' },
+  stepper:    { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.white, borderRadius: 11, padding: 3, borderWidth: 1, borderColor: T.line },
+  stepMinus:  { width: 30, height: 30, borderRadius: 9, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' },
+  stepQty:    { minWidth: 22, textAlign: 'center', fontSize: 14.5, fontFamily: font.extrabold, color: T.ink },
+  stepPlus:   { width: 30, height: 30, borderRadius: 9, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center' },
 
-  basketBar:     {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 20,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    ...shadows.tabBar,
-  },
-  basketMeta:    { flex: 1, marginRight: 12 },
-  basketCount:   { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.textPrimary },
-  basketSummary: { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  cta:           { backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 13, borderRadius: radii.button, minWidth: 148, alignItems: 'center' },
-  ctaPressed:    { opacity: 0.85 },
-  ctaDim:        { opacity: 0.55 },
-  ctaText:       { fontFamily: fonts.bodySemi, fontSize: 15, color: '#fff' },
-
-  resultsHeading:    { fontFamily: fonts.headline, fontSize: 22, color: colors.textPrimary, marginBottom: 16 },
-  platformCard:      { backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 10 },
-  platformCardWin:   { backgroundColor: colors.primary },
-  winBadge:          { fontFamily: fonts.bodySemi, fontSize: 10, color: 'rgba(255,255,255,0.75)', letterSpacing: 1, marginBottom: 6 },
-  platformRow:       { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  platformName:      { fontFamily: fonts.bodySemi, fontSize: 17, color: colors.textPrimary },
-  platformTotal:     { fontFamily: fonts.headline, fontSize: 24, color: colors.textPrimary },
-  totalCol:          { alignItems: 'flex-end' },
-  totalStruck:       { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, textDecorationLine: 'line-through' },
-  codeApplied:       { fontFamily: fonts.bodySemi, fontSize: 12, color: '#2e7d32', marginTop: 6 },
-  codeCaveat:        { fontFamily: fonts.bodyReg, fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  onWin:             { color: '#fff' },
-  platformDetail:    { fontFamily: fonts.bodyReg, fontSize: 13, color: colors.textSecondary, marginTop: 5 },
-  platformCaveat:    { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.textSecondary, marginTop: 8 },
-  onWinSub:          { color: 'rgba(255,255,255,0.75)' },
-
-  resetBtn:   { alignSelf: 'center', marginTop: 20, paddingVertical: 12, paddingHorizontal: 24 },
-  resetText:  { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.primary },
+  barWrap:    { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16 },
+  bar:        { backgroundColor: T.navy, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  barDim:     { opacity: 0.9 },
+  barLeft:    { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
+  barCount:   { minWidth: 24, height: 24, borderRadius: 8, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  barCountText: { fontSize: 13, fontFamily: font.extrabold, color: '#fff' },
+  barLabel:   { fontSize: 15, fontFamily: font.extrabold, color: '#fff', flexShrink: 1 },
+  barTotal:   { fontSize: 17, fontFamily: font.extrabold, color: '#fff' },
 });

@@ -120,3 +120,25 @@ Deals. McD + BK only. Live via `src/api/client.js`. No mock imports.
 - Verified in Simulator: shows McD + BK only (Komagene correctly excluded),
   live data. Screenshot confirmed. (Temp `initialRouteName="Compare"` used to
   view the tab, then reverted.)
+
+## Step 2 — Menu rebuild + Compare-level state + Results route ✅
+- `CompareScreen.js`: added `CompareContext` / `useCompare()` holding
+  `{restaurant, setRestaurant, basket, setQty, clearBasket, results, setResults}`.
+  `setRestaurant` resets basket + results when the restaurant id changes.
+  Added `Results` route to the stack.
+- `compare/MenuScreen.js`: navy/gold rebuild over live `/menu`. Category tabs
+  (Tümü + live categories), `Food` thumbnails via `lib/foodIcon.js` (cosmetic
+  only — never touches price/availability), steppers writing to Compare-level
+  basket, running-total navy compare bar → `compareBasket` → navigate Results.
+  Loading/error(+retry)/empty states. Menu reconciles route-param restaurant
+  into context (covers Search picks AND CodeSheet deep-links).
+- `compare/ResultsScreen.js`: **interim minimal HONEST renderer** — neutral
+  platform cards, effective price (`total_after_code ?? total`), per-item
+  "bulunamadı", code line. NO winner badge / NO savings yet (full single-vs-
+  multi spec is Step 3). Reads context results/restaurant/basket.
+- `lib/foodIcon.js`: name/category → decorative Food glyph, neutral fallback.
+- Verified in Simulator with REAL data (temp seed + initialRoute, reverted):
+  Menu shows live McDonald's menu/tabs/icons/prices; Results shows 3 platforms
+  (McD/Trendyol/Yemeksepeti) with correct per-item bulunamadı and auto-contrast
+  brand tiles. Real-data note: "Efsane İkili" item isn't found on ANY platform —
+  good incomplete-row case for Step 3 to handle (comparable rows only).

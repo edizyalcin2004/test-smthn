@@ -5,8 +5,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { T, font } from '../../theme/tokens';
-import { Screen, Card, Header, SectionHead, Brand } from '../../components/ui';
+import { Screen, Card, Header, SectionHead, Brand, RoundBtn } from '../../components/ui';
 import { Icon } from '../../components/icons';
+import Food from '../../components/Food';
 import { restaurantBrand } from '../../lib/brand';
 import { getRestaurants } from '../../api/client';
 
@@ -14,6 +15,17 @@ import { getRestaurants } from '../../api/client';
 const inScope = (r) => {
   const n = String(r?.name || '').toLowerCase();
   return n.includes('mcdonald') || n.includes('burger king');
+};
+
+// Decorative glyph for a real cuisine_type label (no invented cuisines).
+const cuisineFood = (c) => {
+  const n = String(c).toLowerCase();
+  if (n.includes('tavuk') || n.includes('chicken')) return 'chicken';
+  if (n.includes('pizza'))   return 'pizza';
+  if (n.includes('döner') || n.includes('doner')) return 'wrap';
+  if (n.includes('tatlı') || n.includes('dessert')) return 'donut';
+  if (n.includes('kahve') || n.includes('coffee'))  return 'coffee';
+  return 'burger'; // burger / fast food
 };
 
 export default function SearchScreen({ navigation }) {
@@ -46,6 +58,17 @@ export default function SearchScreen({ navigation }) {
       String(r.cuisine_type || '').toLowerCase().includes(needle));
   }, [all, q]);
 
+  // Distinct real cuisine_type values from in-scope restaurants — no invented
+  // categories. McD + BK both report "Fast Food", so this yields one tile.
+  const cuisines = useMemo(() => {
+    const seen = new Map();
+    for (const r of all) {
+      const c = r.cuisine_type;
+      if (c && !seen.has(c)) seen.set(c, cuisineFood(c));
+    }
+    return [...seen.entries()].map(([label, food]) => ({ label, food }));
+  }, [all]);
+
   const pick = useCallback((r) => navigation.navigate('Menu', { restaurant: r }), [navigation]);
 
   return (
@@ -68,6 +91,7 @@ export default function SearchScreen({ navigation }) {
             <Pressable hitSlop={8} onPress={() => setQ('')}><Icon name="x" s={16} c={T.faint} /></Pressable>
           ) : null}
         </View>
+        <RoundBtn size={48} bg={T.white} style={s.filterBtn}><Icon name="filter" s={20} c={T.ink} /></RoundBtn>
       </View>
 
       <View style={s.section}>
@@ -100,17 +124,33 @@ export default function SearchScreen({ navigation }) {
           </Card>
         )}
       </View>
+
+      {!loading && !error && cuisines.length > 0 ? (
+        <View style={s.section}>
+          <SectionHead title="Mutfaklar" />
+          <View style={s.cuisineGrid}>
+            {cuisines.map((c) => (
+              <View key={c.label} style={s.cuisineTile}>
+                <View style={s.cuisineIcon}><Food name={c.food} s={34} /></View>
+                <Text style={s.cuisineLabel} numberOfLines={1}>{c.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  searchRow:  { paddingHorizontal: 20, paddingTop: 8 },
+  searchRow:  { paddingHorizontal: 20, paddingTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
   searchBox:  {
+    flex: 1,
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: T.white, borderRadius: 14, paddingHorizontal: 14,
     borderWidth: 1, borderColor: T.line2,
   },
+  filterBtn:  { borderRadius: 14 },
   input:      { flex: 1, fontFamily: font.semibold, fontSize: 14, color: T.ink, paddingVertical: 13 },
 
   section:    { paddingHorizontal: 20, paddingTop: 24 },
@@ -121,6 +161,11 @@ const s = StyleSheet.create({
   rowMeta:    { flex: 1, minWidth: 0 },
   rowName:    { fontSize: 15, fontFamily: font.extrabold, color: T.ink },
   rowSub:     { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 2 },
+
+  cuisineGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  cuisineTile:  { width: '22%', alignItems: 'center' },
+  cuisineIcon:  { width: '100%', aspectRatio: 1, backgroundColor: T.white, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: T.line },
+  cuisineLabel: { fontSize: 11.5, fontFamily: font.bold, color: T.sub, marginTop: 8 },
 
   stateCard:  { alignItems: 'center', paddingVertical: 28 },
   empty:      { fontSize: 13.5, fontFamily: font.semibold, color: T.faint },

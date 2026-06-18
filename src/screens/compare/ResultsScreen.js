@@ -44,9 +44,6 @@ export default function ResultsScreen({ navigation }) {
   const incomplete = rows.filter((p) => !allFound(p));
   const isMulti  = comparable.length >= 2;
   const isSingle = comparable.length === 1;
-  const savings  = isMulti
-    ? Math.max(...comparable.map(effective)) - effective(comparable[0])
-    : 0;
 
   // Open the shared CodeSheet for a row's auto-applied code, enriched with the
   // platform + restaurant so the sheet can render its tile and compare CTA.
@@ -77,7 +74,6 @@ export default function ResultsScreen({ navigation }) {
             p={p}
             rank={isMulti ? i + 1 : null}
             winner={isMulti && i === 0}
-            savings={isMulti && i === 0 ? savings : 0}
             onCode={() => openRowCode(p)}
           />
         ))}
@@ -98,12 +94,20 @@ export default function ResultsScreen({ navigation }) {
             {incomplete.map((p) => <IncompleteCard key={String(p.platform.id)} p={p} />)}
           </View>
         ) : null}
+
+        {/* Filtrele & Sırala (design element; sort/filter not yet wired) */}
+        {rows.length > 0 ? (
+          <Pressable style={s.filterBtn} onPress={() => {}}>
+            <Icon name="filter" s={18} c="#fff" />
+            <Text style={s.filterText}>Filtrele &amp; Sırala</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
-function PlatformCard({ p, rank, winner, savings, onCode }) {
+function PlatformCard({ p, rank, winner, onCode }) {
   const brand   = platformBrand(p.platform);
   const coded   = hasCode(p);
   const codeOff = coded ? num(p.total) - num(p.total_after_code) : 0;
@@ -141,10 +145,6 @@ function PlatformCard({ p, rank, winner, savings, onCode }) {
           {coded ? <Text style={s.off}>−{money(codeOff)}</Text> : null}
         </View>
       </View>
-
-      {savings > 0 ? (
-        <Text style={s.savings}>En pahalı platforma göre {money(savings)} tasarruf</Text>
-      ) : null}
 
       <View style={s.lines}>
         {(p.items ?? []).map((it, j) => (
@@ -214,7 +214,6 @@ const s = StyleSheet.create({
   priceWin:{ color: T.green },
   off:     { fontSize: 12, fontFamily: font.bold, color: T.green, marginTop: 1 },
 
-  savings: { fontSize: 12.5, fontFamily: font.bold, color: T.green, marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: T.line },
   lines:   { marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: T.line, gap: 4 },
   line:    { fontSize: 13, fontFamily: font.medium, color: T.sub },
 
@@ -224,4 +223,7 @@ const s = StyleSheet.create({
   incTop:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
   incName: { fontSize: 14, fontFamily: font.bold, color: T.sub, flexShrink: 1 },
   incCaveat: { fontSize: 11.5, fontFamily: font.bold, color: T.coral, marginTop: 6 },
+
+  filterBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: T.navy, borderRadius: 16, paddingVertical: 15, marginTop: 6 },
+  filterText: { fontSize: 15, fontFamily: font.extrabold, color: '#fff' },
 });

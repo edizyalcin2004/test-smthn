@@ -63,7 +63,7 @@ export default function DealsScreen() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 4 }]}>
-      <Header title="Aktif kodlar" sub="Süresi en yakına göre" />
+      <Header title="Aktif kodlar" sub="Süresi en yakına göre" onBell={() => {}} bellBadge={false} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}

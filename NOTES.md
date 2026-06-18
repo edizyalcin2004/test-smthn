@@ -199,3 +199,26 @@ All screens rebuilt navy/gold + wired live: Search, Menu, Results (honesty spec)
 Hub, Deals + shared CodeSheet. Budget/Account left presentation-only.
 McD + BK only. No mock imports. No backend/client.js data-logic changes
 (only additive getRestaurants wrapper).
+
+## Design-fidelity pass (2026-06-18) — render every design ELEMENT; suppress only fake DATA
+Founder rule: a section backed by mock data is NOT a reason to delete it; only
+suppress fabricated data values. Per-item audit vs design-ref screen-*.jsx:
+- **Cuisines grid "Mutfaklar"** — IN DESIGN (screen-search.jsx). Now RENDERED,
+  tiles from distinct real `cuisine_type` only (McD+BK → one "Fast Food" tile).
+  No invented cuisines. Also added the filter button beside the search bar
+  (design element, screen-search.jsx:15).
+- **Star ratings** — in design but fake number → stay OMITTED (no fabrication).
+- **"₺X tasarruf" savings line on Results** — NOT in design ref. Removed (was my
+  invention). Design's only savings is per-row `−₺codeOff` (kept). EN UCUZ stays
+  multi-platform-only (honesty crux); BK single = no badge, no savings.
+- **Bang-for-Buck** — NOT in any design-ref screen (grep confirmed) → stays out.
+- **"Filtrele & Sırala" button on Results** — IN DESIGN (screen-results.jsx:75).
+  Now RENDERED (control; sort/filter not yet wired — no filter endpoint).
+- **Deals header bell** — IN DESIGN (no-op, bellBadge false) → now rendered.
+- **Delivery/ETA meta row on Results** — IN DESIGN but pure mock deliveryFee/eta
+  with no backend source (same class as star ratings) → OMITTED, flagged for
+  founder confirmation. Likewise menu-item desc (no /menu field) and Deals
+  "verified" check (no field) stay omitted as absent/fake data.
+- Verified in Simulator: Search shows filter btn + Mutfaklar(Fast Food);
+  Results McD multi shows winner+EN UCUZ, NO tasarruf line, Filtrele&Sırala
+  button present, Yemeksepeti still demoted to incomplete block.

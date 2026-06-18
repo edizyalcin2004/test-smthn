@@ -170,3 +170,16 @@ Deals. McD + BK only. Live via `src/api/client.js`. No mock imports.
 - Probed backend to source cases: `/compare-basket` McD start 0=3 comparable,
   20=2 comparable+1 incomplete; BK=1 platform always (Yemeksepeti-only).
 - **Compare flow (Search→Menu→Results) now fully rebuilt + wired.** Next: Hub.
+
+## Step 4 — Hub rebuild ✅
+- `HubScreen.js` rebuilt in navy/gold (replaces old teal Pryce screen).
+  Greeting header + bell→Deals, navy compare hero (mascot + sparkles) →
+  `Compare/Search`, "Günün Kodları" LIVE: `getDiscountCodes()` sorted
+  soonest-expiring (NOT by discount_value), top 5, each row opens CodeSheet.
+  `timeLeft()` shows gün/saat/dk remaining. Loading/error/empty states.
+- **Bang-for-Buck dropped from Hub** (not in new design — plan decision #4).
+- Verified in Simulator: hero + mascot render; live codes (TY ₺20 / YS ₺250,
+  both 12 gün); **CodeSheet verified end-to-end** (temp auto-open, reverted):
+  TY tile, ₺20 gold pill, Min ₺320, Bitiş "30 Haziran 2026", item_scoped
+  surfaced in Açıklama, copy button correctly hidden for codeless campaign,
+  "Restoranı karşılaştır" shown (restaurant resolved). Remote pushed thru step 3.

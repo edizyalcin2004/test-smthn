@@ -183,3 +183,19 @@ Deals. McD + BK only. Live via `src/api/client.js`. No mock imports.
   TY tile, ₺20 gold pill, Min ₺320, Bitiş "30 Haziran 2026", item_scoped
   surfaced in Açıklama, copy button correctly hidden for codeless campaign,
   "Restoranı karşılaştır" shown (restaurant resolved). Remote pushed thru step 3.
+
+## Step 5 — Deals rebuild ✅ (final screen)
+- `DealsScreen.js` rebuilt in navy/gold (replaces old BfB/platform-sections).
+  "Aktif kodlar" + "Süresi en yakına göre"; ALL live codes sorted
+  soonest-expiry; each Card opens shared CodeSheet. Min + time-left pills,
+  pull-to-refresh, loading/error/empty states.
+- Fixed: added top safe-area inset (plain View root was overlapping the status
+  bar; Hub/Search use <Screen> which handles it).
+- Verified in Simulator: header clear of status bar; TY ₺20 (Min ₺320, 12 gün)
+  + YS ₺250 (Min ₺500, 12 gün) cards, sorted, tappable.
+
+## SESSION 2 COMPLETE
+All screens rebuilt navy/gold + wired live: Search, Menu, Results (honesty spec),
+Hub, Deals + shared CodeSheet. Budget/Account left presentation-only.
+McD + BK only. No mock imports. No backend/client.js data-logic changes
+(only additive getRestaurants wrapper).

@@ -268,3 +268,32 @@ Scope kept: list is still McD + BK only (inScope filter unchanged); no star rati
 
 Verified: forced `/index.bundle` rebuild → HTTP 200, no error markers, `restaurantTile`
 present in bundle.
+
+## Fix 3 — "Kategoriler" grid ✅
+Was: grouped by `cuisine_type` (McD+BK both "Fast Food" → a single dead-looking tile),
+heading "Mutfaklar".
+
+Now: groups by REAL `menu_items.category`, heading renamed to **"Kategoriler"**.
+`categoryFood(category)` maps real Turkish category strings → a corrected food glyph
+(Fix 1 set) and returns null for promo/combo categories (`Menüler`, `Coca-Cola Fırsat
+Menüleri`, `Happy Meal`, `Çocuk Menüleri`, `Mandalorian & Grogu`, etc.) so they're
+skipped — no invented categories, no junk tiles. Deduped by glyph: one tile per food
+type, first real category label that maps to it wins.
+
+Renders 8 tiles from live McD+BK data (verified by simulating the exact grouping
+against `/restaurants`):
+  Burgerler→burger, Atıştırmalıklar→fries, İçecekler→drink, Soslar→hot-sauce,
+  Tatlılar→cake, Dürümler→wrap, Dondurmalar→ice-cream, Kahveler→coffee.
+
+⚠ Turkish-casing bug found + fixed during verification: `'İçecekler'.toLowerCase()`
+yields a dotted-i (`i̇çecekler`) in both Python and JS, so `'içecek'` never matched
+and the drinks tile silently vanished. Matcher now keys on `'çecek'` (casing-robust).
+
+**Dead-control note (per Fix 3 instruction):** the category tiles are DECORATIVE —
+non-interactive Views with no press affordance (same as the old cuisine grid). There
+is no real category-filter destination yet (MenuScreen takes a restaurant, not a
+category; a category spans both restaurants). So nothing is wired to tap and nothing
+LOOKS tappable → not a dead control. **Reported for Ediz** to decide if/where tapping
+a category should navigate.
+
+Verified: `/index.bundle` HTTP 200, no errors; grouping simulated on live data = 8 tiles.

@@ -17,15 +17,26 @@ const inScope = (r) => {
   return n.includes('mcdonald') || n.includes('burger king');
 };
 
-// Decorative glyph for a real cuisine_type label (no invented cuisines).
-const cuisineFood = (c) => {
+// Glyph for a REAL menu_items.category label. Returns null for promo/combo
+// categories (Menüler, Coca-Cola Fırsat Menüleri, Happy Meal, Çocuk Menüleri…)
+// that have no clean food type — those are skipped, never shown as junk tiles.
+// Every glyph maps to a corrected icon from the swapped set (Fix 1).
+const categoryFood = (c) => {
   const n = String(c).toLowerCase();
-  if (n.includes('tavuk') || n.includes('chicken')) return 'chicken';
-  if (n.includes('pizza'))   return 'pizza';
-  if (n.includes('döner') || n.includes('doner')) return 'wrap';
-  if (n.includes('tatlı') || n.includes('dessert')) return 'donut';
-  if (n.includes('kahve') || n.includes('coffee'))  return 'coffee';
-  return 'burger'; // burger / fast food
+  if (n.includes('burger'))                          return 'burger';
+  if (n.includes('dürüm') || n.includes('durum') || n.includes('wrap')) return 'wrap';
+  if (n.includes('tavuk') || n.includes('chicken') || n.includes('nugget')) return 'chicken';
+  if (n.includes('pizza'))                           return 'pizza';
+  if (n.includes('kahve') || n.includes('coffee'))   return 'coffee';
+  if (n.includes('çecek') || n.includes('icecek'))   return 'drink'; // İçecekler (Turkish İ→dotted i, match on çecek)
+  if (n.includes('dondurma') || n.includes('ice'))   return 'ice-cream';
+  if (n.includes('tatlı') || n.includes('tatli') || n.includes('dessert')) return 'cake';
+  if (n.includes('sos'))                             return 'hot-sauce';
+  if (n.includes('patates') || n.includes('atıştır') || n.includes('atistir') || n.includes('yan ürün') || n.includes('yan urun')) return 'fries';
+  if (n.includes('salata') || n.includes('salad'))   return 'salad';
+  if (n.includes('çorba') || n.includes('corba') || n.includes('soup')) return 'soup';
+  if (n.includes('balık') || n.includes('balik') || n.includes('fish')) return 'fish';
+  return null; // promo / combo / generic "Menüler" — no clean food type
 };
 
 export default function SearchScreen({ navigation }) {
@@ -58,15 +69,19 @@ export default function SearchScreen({ navigation }) {
       String(r.cuisine_type || '').toLowerCase().includes(needle));
   }, [all, q]);
 
-  // Distinct real cuisine_type values from in-scope restaurants — no invented
-  // categories. McD + BK both report "Fast Food", so this yields one tile.
-  const cuisines = useMemo(() => {
-    const seen = new Map();
+  // Real menu_items.category values from in-scope restaurants, mapped to food
+  // glyphs and deduped by glyph (one tile per food type; first real category
+  // label that maps to it wins). Promo/combo categories that don't map to a
+  // clean food type are skipped — no invented categories, no junk tiles.
+  const categories = useMemo(() => {
+    const byGlyph = new Map(); // glyph -> first real label
     for (const r of all) {
-      const c = r.cuisine_type;
-      if (c && !seen.has(c)) seen.set(c, cuisineFood(c));
+      for (const it of r.menu_items || []) {
+        const food = categoryFood(it.category);
+        if (food && !byGlyph.has(food)) byGlyph.set(food, it.category);
+      }
     }
-    return [...seen.entries()].map(([label, food]) => ({ label, food }));
+    return [...byGlyph.entries()].map(([food, label]) => ({ label, food }));
   }, [all]);
 
   const pick = useCallback((r) => navigation.navigate('Menu', { restaurant: r }), [navigation]);
@@ -127,12 +142,12 @@ export default function SearchScreen({ navigation }) {
         )}
       </View>
 
-      {!loading && !error && cuisines.length > 0 ? (
+      {!loading && !error && categories.length > 0 ? (
         <View style={s.section}>
-          <SectionHead title="Mutfaklar" />
+          <SectionHead title="Kategoriler" />
           <View style={s.cuisineGrid}>
-            {cuisines.map((c) => (
-              <View key={c.label} style={s.cuisineTile}>
+            {categories.map((c) => (
+              <View key={c.food} style={s.cuisineTile}>
                 <View style={s.cuisineIcon}><Food name={c.food} s={34} /></View>
                 <Text style={s.cuisineLabel} numberOfLines={1}>{c.label}</Text>
               </View>

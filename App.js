@@ -66,12 +66,15 @@ export default function App() {
       <NavigationContainer ref={navigationRef}>
         <CodeSheetProvider navigationRef={navigationRef}>
           <Tab.Navigator
+            initialRouteName="Hub"
             tabBar={(props) => <TabBar {...props} />}
             screenOptions={{ headerShown: false }}
           >
-            <Tab.Screen name="Hub"     component={HubScreen} />
+            {/* Hub sits at the CENTRE (position 3 of 5). initialRouteName keeps
+                the app landing on Hub regardless of its position in this list. */}
             <Tab.Screen name="Compare" component={CompareScreen} />
             <Tab.Screen name="Budget"  component={BudgetScreen} />
+            <Tab.Screen name="Hub"     component={HubScreen} />
             <Tab.Screen name="Deals"   component={DealsScreen} />
             <Tab.Screen name="Account" component={AccountStackScreen} />
           </Tab.Navigator>

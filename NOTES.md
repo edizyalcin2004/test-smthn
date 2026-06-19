@@ -297,3 +297,25 @@ LOOKS tappable → not a dead control. **Reported for Ediz** to decide if/where 
 a category should navigate.
 
 Verified: `/index.bundle` HTTP 200, no errors; grouping simulated on live data = 8 tiles.
+
+## Fix 4 — Tab bar order ✅
+Moved **Hub to the CENTRE (position 3 of 5)** in `App.js`'s `Tab.Navigator`.
+New order: **Compare · Budget · Hub · Deals · Account**.
+
+Tab order is defined by `<Tab.Screen>` registration order in App.js (the app's own
+entry file — NOT the off-limits design-ref `app.jsx`), not in TabBar.js. TabBar.js
+renders `state.routes` dynamically, so icons (mapped by route NAME in `TAB_ICONS`) and
+the press-scale animation (in `TabItem`) are preserved untouched.
+
+Added `initialRouteName="Hub"` so the app still LANDS on Hub regardless of its new
+position. No hardcoded tab indices exist anywhere (grepped App.js + src) — nothing
+else to update.
+
+Verified in Simulator: tab bar reads Compare · Budget · Hub(centre) · Deals · Account;
+app opens on Hub; icons + active gold pill intact.
+
+---
+
+## Push status
+⚠ First push attempt (after Fix 1) FAILED (exit 128) — see end of session for
+re-push + final local/remote sync confirmation.

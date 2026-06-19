@@ -40,3 +40,19 @@ export function restaurantBrand(restaurant) {
   if (!restaurant) return { bg: T.navy, fg: '#fff', short: '?' };
   return { bg: T.navy, fg: '#fff', short: shortLabel(restaurant.name) };
 }
+
+// Per-restaurant tile style: a brand-evoking colour + a food glyph from the
+// swapped icon set. NOT a logo (logos are an IP risk) — just a coloured icon
+// tile. Only the two REAL in-scope restaurants have entries; anything else
+// gets a neutral navy fallback so nothing breaks if data expands.
+// Colours are brand-evoking defaults — Ediz can swap to palette tokens.
+const RESTAURANT_TILES = [
+  { match: 'mcdonald',    bg: '#DA291C', food: 'burger' }, // McDonald's red
+  { match: 'burger king', bg: '#1B2A4A', food: 'burger' }, // BK navy
+];
+export function restaurantTile(restaurant) {
+  const n = String(restaurant?.name || '').toLowerCase();
+  const hit = RESTAURANT_TILES.find((t) => n.includes(t.match));
+  if (hit) return { bg: hit.bg, food: hit.food };
+  return { bg: T.navy, food: 'delivery-bag' };
+}

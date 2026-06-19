@@ -245,3 +245,26 @@ Per Fix 1c — icon with no category mapping is dead weight. Listed for Ediz.
 **Mascot:** `assets/mascot.png` byte-identical to ref → not swapped.
 
 Verified: iOS bundle recompiled clean (1166 modules, no missing-asset errors).
+
+## Fix 2 — Restaurant thumbnails ✅
+Replaced the uniform navy "McD"/"BK" text tiles with brand-evoking coloured icon
+tiles (NOT logos — IP-safe per PRYCE_CONTEXT).
+
+`src/lib/brand.js`: added `restaurantTile(restaurant)` — a 2-entry style map:
+- **McDonald's** → bg `#DA291C` (red), food glyph `burger`
+- **Burger King** → bg `#1B2A4A` (navy), food glyph `burger`
+- fallback (any other name) → navy bg + `delivery-bag` glyph (never fabricates a brand)
+
+Both are burger chains, so both use the `burger` glyph; they're distinguished by
+colour. **Colours are brand-evoking defaults — Ediz can swap to palette tokens
+(tokens.js) if preferred.**
+
+`src/screens/compare/SearchScreen.js`: restaurant rows now render a 46×46 r13 tile
+(`s.rTile`) coloured per `restaurantTile`, with a centred `<Food s={28}>` glyph.
+Dropped the unused `Brand` / `restaurantBrand` imports.
+
+Scope kept: list is still McD + BK only (inScope filter unchanged); no star ratings
+(none rendered before, still none); no mock restaurants added.
+
+Verified: forced `/index.bundle` rebuild → HTTP 200, no error markers, `restaurantTile`
+present in bundle.

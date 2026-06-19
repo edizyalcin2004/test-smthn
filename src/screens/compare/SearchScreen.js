@@ -5,10 +5,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { T, font } from '../../theme/tokens';
-import { Screen, Card, Header, SectionHead, Brand, RoundBtn } from '../../components/ui';
+import { Screen, Card, Header, SectionHead, RoundBtn } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
-import { restaurantBrand } from '../../lib/brand';
+import { restaurantTile } from '../../lib/brand';
 import { getRestaurants } from '../../api/client';
 
 // Scope guard: McDonald's + Burger King only (Komagene and anything else hidden).
@@ -113,7 +113,9 @@ export default function SearchScreen({ navigation }) {
                 onPress={() => pick(r)}
                 style={({ pressed }) => [s.row, i ? s.rowBorder : null, pressed && s.rowPressed]}
               >
-                <Brand brand={restaurantBrand(r)} size={46} radius={13} />
+                {(() => { const t = restaurantTile(r); return (
+                  <View style={[s.rTile, { backgroundColor: t.bg }]}><Food name={t.food} s={28} /></View>
+                ); })()}
                 <View style={s.rowMeta}>
                   <Text style={s.rowName} numberOfLines={1}>{r.name}</Text>
                   {r.cuisine_type ? <Text style={s.rowSub} numberOfLines={1}>{r.cuisine_type}</Text> : null}
@@ -155,6 +157,7 @@ const s = StyleSheet.create({
 
   section:    { paddingHorizontal: 20, paddingTop: 24 },
 
+  rTile:      { width: 46, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   row:        { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 16 },
   rowBorder:  { borderTopWidth: 1, borderTopColor: T.line },
   rowPressed: { opacity: 0.6 },

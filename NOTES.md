@@ -316,6 +316,11 @@ app opens on Hub; icons + active gold pill intact.
 
 ---
 
-## Push status
-⚠ First push attempt (after Fix 1) FAILED (exit 128) — see end of session for
-re-push + final local/remote sync confirmation.
+## Push status ✅
+First background push attempt failed (exit 128) — the background shell couldn't read
+the macOS keychain for the HTTPS GitHub remote (`-60008`/`-25320`, "Device not
+configured"). Retried in the FOREGROUND → succeeded. All 4 fix commits pushed.
+**Local + remote in sync at `0dad583` (origin/main).**
+
+Note for future: HTTPS-remote pushes need foreground keychain access — background
+`git push` will fail credential lookup.

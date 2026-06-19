@@ -1,17 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fries icon">
-  <title>Fries icon</title>
-  <defs>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
-    </filter>
-  </defs>
-  
-  <g filter="url(#softShadow)">
-    <path d="M151 128h32l10 202h-50zM217 96h34l-4 234h-58zM285 118h36l-36 212h-50zM337 148h32l-53 182h-48z" fill="#FFD65A"></path>
-    <path d="M127 232h258l-29 184H156z" fill="#E94235"></path>
-    <path d="M145 261h222l-10 63c-64 18-136 18-202 0z" fill="#FF5A4E" opacity=".9"></path>
-    <ellipse cx="256" cy="233" rx="129" ry="24" fill="#E94235"></ellipse>
-    <path d="M178 288h156" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" opacity=".9"></path>
-  </g>
-
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<g fill="#E8AE3C"><rect x="150" y="152" width="33" height="120"></rect><rect x="222" y="70" width="33" height="205"></rect><rect x="294" y="100" width="33" height="172"></rect></g>
+<g fill="#F7CE5E"><rect x="186" y="112" width="33" height="160"></rect><rect x="258" y="56" width="33" height="216"></rect><rect x="330" y="140" width="33" height="132"></rect></g>
+<g fill="#FBE08A"><rect x="222" y="70" width="33" height="26"></rect><rect x="258" y="56" width="33" height="26"></rect><rect x="330" y="140" width="33" height="22"></rect></g>
+<path d="M118 250C118 250 130 176 150 176S176 250 256 250 342 176 362 176 394 250 394 250L372 462C370 472 362 476 352 476L160 476C150 476 142 472 140 462Z" fill="#ED3B2E"></path>
+<path d="M256 250C337 250 342 176 362 176S394 250 394 250L372 462C370 472 362 476 352 476L256 476Z" fill="#CE2C22"></path>
+<ellipse cx="248" cy="402" rx="78" ry="46" fill="#F7EAD0"></ellipse></svg>

@@ -1,17 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Chicken icon">
-  <title>Chicken icon</title>
-  <defs>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061B3A" flood-opacity="0.12"></feDropShadow>
-    </filter>
-  </defs>
-  
-  <g filter="url(#softShadow)">
-    <path d="M224 158c51-31 119-16 151 34 38 59 8 142-61 160-56 15-114-16-132-70-16-47 0-97 42-124z" fill="#FF7A1A"></path>
-    <path d="M157 295l-60 61c-14 14-37 14-51 0s-14-37 0-51l60-61z" fill="#F6E4BE"></path>
-    <path d="M116 253l55 55" stroke="#FF7A1A" stroke-width="48" stroke-linecap="round"></path>
-    <circle cx="60" cy="362" r="24" fill="#F6E4BE"></circle><circle cx="41" cy="329" r="22" fill="#F6E4BE"></circle>
-    <path d="M254 204c23-13 55-7 72 14" stroke="#FFC857" stroke-width="12" stroke-linecap="round" opacity=".65"></path>
-  </g>
-
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs><clipPath id="ck"><ellipse cx="302" cy="206" rx="178" ry="120" transform="rotate(-43 302 206)"></ellipse></clipPath></defs>
+<g fill="#FBE9C8">
+<rect x="96" y="350" width="92" height="38" rx="19" transform="rotate(-43 142 369)"></rect>
+<circle cx="112" cy="404" r="24"></circle>
+<circle cx="90" cy="380" r="21"></circle>
+</g>
+<g clip-path="url(#ck)">
+<rect x="0" y="0" width="512" height="512" fill="#FFB23B"></rect>
+<polygon points="512,30 512,512 40,512" fill="#FB9A1F"></polygon>
+</g>
+<path d="M300 92C330 82 366 90 392 116" fill="none" stroke="#FFCE63" stroke-width="14" stroke-linecap="round"></path></svg>

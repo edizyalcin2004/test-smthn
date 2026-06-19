@@ -222,3 +222,26 @@ suppress fabricated data values. Per-item audit vs design-ref screen-*.jsx:
 - Verified in Simulator: Search shows filter btn + Mutfaklar(Fast Food);
   Results McD multi shows winner+EN UCUZ, NO tasarruf line, Filtrele&Sırala
   button present, Yemeksepeti still demoted to incomplete block.
+
+---
+
+# Polish pass — icon swap + restaurant tiles + grid/tabbar (2026-06-19)
+
+Baseline before this work: commit `9d81628` (clean tree, in sync with origin/main).
+
+## Fix 1 — Icon swap ✅
+Compared `~/Documents/pryce-design-ref-19/assets/icons/` (25 SVGs) vs app's
+`assets/icons/` (22 SVGs).
+
+**Overwritten (7 — these differed; 15 others byte-identical, no write needed):**
+burger-menu, burger, chicken, drink, fries, pizza, wrap (.svg).
+All 7 reuse filenames already imported + mapped in `src/components/Food.js`, so they
+render via the existing `<Food name=…>` API with no wiring changes.
+
+**Held back (3 new names, NOT in app, NOT wired — no category mapping):**
+chicken-menu.svg, pizza-menu.svg, wrap-menu.svg.
+Per Fix 1c — icon with no category mapping is dead weight. Listed for Ediz.
+
+**Mascot:** `assets/mascot.png` byte-identical to ref → not swapped.
+
+Verified: iOS bundle recompiled clean (1166 modules, no missing-asset errors).

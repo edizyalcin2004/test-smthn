@@ -324,3 +324,58 @@ configured"). Retried in the FOREGROUND → succeeded. All 4 fix commits pushed.
 
 Note for future: HTTPS-remote pushes need foreground keychain access — background
 `git push` will fail credential lookup.
+
+---
+
+# Özel Menüler section on Deals tab (2026-06-20)
+
+Wired the platform-EXCLUSIVE special-menu bundles to the live /special-deals
+endpoint, alongside the existing discount-codes view. Honest single-platform /
+single-price — no comparison UI.
+
+## Files
+- `src/api/client.js` — added `getSpecialDeals()` (GET /special-deals). Only fetch added.
+- `src/screens/DealsScreen.js` — restructured into the design-ref's segmented layout.
+
+## Structure (matches screen-deals.jsx)
+Header "Fırsatlar" + **segmented toggle [ Kodlar | Özel Menüler ]**, default
+**Özel Menüler** (ref initialSeg='menuler'). Single ScrollView + RefreshControl →
+pull-to-refresh reloads BOTH codes and special-deals.
+- **Kodlar segment** = the previous "Aktif kodlar" code-card list, preserved verbatim
+  (CodeSheet openCode, Brand/Pill, Min+time pills, "Süresi en yakına göre" hint, states).
+- **Özel Menüler segment** = SpecialMenusView: search + filter panel + restaurant groups.
+
+## Data transform
+/special-deals returns groups keyed by restaurant+platform. Flattened → one group
+per restaurant (each bundle carries its own platform object). Filtered to **McD + BK
+only** (`inScope`, Komagene hidden — founder decision, consistent with Search scope).
+
+## Honesty (all enforced, confirmed on simulator)
+- PlatformBadge colour from live `platform.hex_color`, label from live `platform.name`
+  (Trendyol Yemek = orange, Yemeksepeti = red) — never parsed from item name.
+- Plain price only. NO winner/EN UCUZ badge, NO savings line, NO strikethrough/old price,
+  NO star ratings, NO photos. "Yalnızca {platform}'de" exclusivity footer.
+- Empty state: mascot + "Şu an özel menü yok"; filtered-empty: "Sonuç bulunamadı" + temizle.
+- All Turkish; `toLocaleLowerCase('tr')` used for search + scope (İ/ı-safe).
+
+## Filters (per founder)
+- Kept the ref's filter UI. **Kategori options built DYNAMICALLY from the distinct
+  live `category` values actually present** (Bonkör Menü / Yemeksepeti Özel Fiyat /
+  Yemeksepeti Özel Menüleri) — each chip maps to real bundles, filters on the item's
+  own `category`. No hardcoded Burger/Tavuk/Pizza.
+- Platform chips kept as forward UI (Tümü/Yemeksepeti/Trendyol/Getir); dot colours
+  pulled from live hex_color (Getir absent → no dot). Wired to filter live data.
+
+## Verification (iOS Simulator)
+- Özel Menüler renders correctly: McD (Trendyol ₺500, Yemeksepeti ₺500) + Burger King
+  (Yemeksepeti ₺395) groups, brand-coloured badges, exclusivity footers, "2 özel menü"
+  count, Komagene hidden. ✓
+- Kodlar segment renders the preserved code cards (TY/YS, Min+time pills). ✓
+- Segmented toggle switches between the two; default = Özel Menüler. ✓
+- Bundle compiles clean (HTTP 200). Dynamic Kategori options verified against live
+  data (3 real categories).
+- NOTE: the filter-panel OPEN state wasn't screenshot-captured — the simulator's
+  synthetic-click automation behaved nonlinearly at high-x and AX enumeration was
+  intermittent. Filter logic is verified by compile + live-data simulation; the
+  filter control renders (present in the AX tree). Physical-iPhone acceptance (founder)
+  is the real gate.

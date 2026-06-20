@@ -99,3 +99,15 @@ export function getDiscountCodes(restaurantId) {
   const query = restaurantId != null ? `?restaurant_id=${restaurantId}` : '';
   return request(`/discount-codes${query}`);
 }
+
+// GET /special-deals — platform-EXCLUSIVE special-menu bundles, grouped by
+// restaurant+platform. Bare array of:
+// {restaurant_id, restaurant_name, platform: {id, name, hex_color},
+//  items: [{id, name, category, price: "string", scraped_at}]}
+// Each bundle lives on ONE platform at ONE price — never compared, no cheapest
+// claim. The platform identity (badge colour + label) comes from the nested
+// platform object; never parse it from the item name. Render only what's
+// returned — no fabricated photos/ratings/savings.
+export function getSpecialDeals() {
+  return request('/special-deals');
+}

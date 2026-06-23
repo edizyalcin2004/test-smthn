@@ -47,8 +47,9 @@ export function restaurantBrand(restaurant) {
 // gets a neutral navy fallback so nothing breaks if data expands.
 // Colours are brand-evoking defaults — Ediz can swap to palette tokens.
 const RESTAURANT_TILES = [
-  { match: 'mcdonald',    bg: '#DA291C', food: 'burger' }, // McDonald's red
-  { match: 'burger king', bg: '#1B2A4A', food: 'burger' }, // BK navy
+  { match: 'mcdonald',    bg: '#DA291C',  food: 'burger' },  // McDonald's red
+  { match: 'burger king', bg: '#1B2A4A',  food: 'burger' },  // BK navy
+  { match: 'cajun',       bg: T.cajun,    food: 'chicken' }, // Cajun Corner — chicken glyph (NOT a logo), warm-orange token
 ];
 export function restaurantTile(restaurant) {
   const n = String(restaurant?.name || '').toLowerCase();

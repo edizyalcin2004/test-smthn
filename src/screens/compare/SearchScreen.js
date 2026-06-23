@@ -11,10 +11,12 @@ import Food from '../../components/Food';
 import { restaurantTile } from '../../lib/brand';
 import { getRestaurants } from '../../api/client';
 
-// Scope guard: McDonald's + Burger King only (Komagene and anything else hidden).
+// Scope guard: McDonald's + Burger King + Cajun Corner (Komagene and anything
+// else hidden). Cajun is the first restaurant priced on TWO aggregators (TGO +
+// YS), so it exercises the real cheapest-first winner path in Results.
 const inScope = (r) => {
   const n = String(r?.name || '').toLowerCase();
-  return n.includes('mcdonald') || n.includes('burger king');
+  return n.includes('mcdonald') || n.includes('burger king') || n.includes('cajun');
 };
 
 // Glyph for a REAL menu_items.category label. Returns null for promo/combo

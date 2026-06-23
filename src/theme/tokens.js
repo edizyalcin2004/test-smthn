@@ -14,6 +14,7 @@ export const T = {
   amber:    '#FFC857',
   gold:     '#F5A524',
   orange:   '#FF7A1A',
+  cajun:    '#EE9B2E', // Cajun Corner tile accent (warm orange wordmark outline)
   coral:    '#FF5A4E',
   red:      '#E94235',
   green:    '#2BAE66',

@@ -379,3 +379,32 @@ only** (`inScope`, Komagene hidden — founder decision, consistent with Search 
   intermittent. Filter logic is verified by compile + live-data simulation; the
   filter control renders (present in the AX tree). Physical-iPhone acceptance (founder)
   is the real gate.
+
+---
+
+# Surface Cajun Corner in Search (2026-06-23)
+
+First restaurant priced on TWO aggregators (Trendyol Yemek + Yemeksepeti) — so its
+Results show a REAL cheapest-first winner (EN UCUZ). 3 files, no Results refactor.
+
+## Changes
+- `src/theme/tokens.js` — added `cajun: '#EE9B2E'` token (warm-orange wordmark accent;
+  founder will nudge exact value on device).
+- `src/lib/brand.js` — added RESTAURANT_TILES entry `{ match:'cajun', bg:T.cajun,
+  food:'chicken' }`. Chicken glyph (already in Food.js), NOT the logo (IP-safe). Uses
+  the token, not a literal hex.
+- `src/screens/compare/SearchScreen.js` — extended `inScope` to also match 'cajun'.
+
+## Why no Menu/Results change
+- MenuScreen fetches by `restaurant.id` route param — restaurant-agnostic.
+- ResultsScreen winner logic already keys off `comparable.length` (allFound rows):
+  `isMulti = comparable.length >= 2` → rank + EN UCUZ; `isSingle === 1` → neutral card,
+  no winner/savings + "tek platformda satılıyor" note. Surfacing Cajun simply exercises
+  the existing isMulti path.
+
+## Verified
+- Metro bundles clean: /index.bundle HTTP 200, real JS, `cajun` present.
+- Live /compare-basket: Cajun item 578 → 2 platforms (TGO+YS), both allFound →
+  comparable=2 → EN UCUZ fires. BK → 1 platform (YS) → comparable=1 → suppressed.
+- Cajun cuisine_type is null → row shows name only (no fabricated subtext/rating).
+- On-device acceptance is the founder's step.

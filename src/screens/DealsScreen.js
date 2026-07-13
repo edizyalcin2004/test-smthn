@@ -16,13 +16,6 @@ import { platformBrand, restaurantTile } from '../lib/brand';
 import { getDiscountCodes, getSpecialDeals } from '../api/client';
 import { useCodeSheet } from '../components/CodeSheet';
 
-// MVP scope: McDonald's + Burger King only (Komagene and anything else hidden),
-// matching the Search tab. toLocaleLowerCase('tr') keeps İ/ı casing honest.
-const inScope = (name) => {
-  const n = String(name).toLocaleLowerCase('tr');
-  return n.includes('mcdonald') || n.includes('burger king');
-};
-
 // Normalise a live platform name ("Trendyol Yemek") to a stable filter key.
 const platformKey = (name = '') => {
   const n = String(name).toLocaleLowerCase('tr');
@@ -94,11 +87,11 @@ export default function DealsScreen() {
   }, [codes]);
 
   // Flatten /special-deals (groups are restaurant+platform) into one group per
-  // in-scope restaurant; each bundle carries its own platform object.
+  // restaurant; each bundle carries its own platform object. Every restaurant
+  // the backend returns is rendered — visibility scoping is backend-side.
   const restaurantGroups = useMemo(() => {
     const byId = new Map();
     for (const g of special) {
-      if (!inScope(g.restaurant_name)) continue;
       let entry = byId.get(g.restaurant_id);
       if (!entry) {
         entry = { restaurant_id: g.restaurant_id, restaurant_name: g.restaurant_name, bundles: [] };

@@ -1,7 +1,7 @@
 // SearchScreen — navy/gold rebuild, wired live.
-// Lists the in-scope restaurants (McDonald's + Burger King) from /restaurants;
-// the search box filters that list client-side. No fabricated ratings — the
-// backend returns none, so we show a chevron instead.
+// Lists the in-scope restaurants from /restaurants; the search box filters
+// that list client-side. No fabricated ratings — the backend returns none,
+// so we show a chevron instead.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { T, font } from '../../theme/tokens';
@@ -11,13 +11,15 @@ import Food from '../../components/Food';
 import { restaurantTile } from '../../lib/brand';
 import { getRestaurants } from '../../api/client';
 
-// Scope guard: McDonald's + Burger King + Cajun Corner (Komagene and anything
-// else hidden). Cajun is the first restaurant priced on TWO aggregators (TGO +
-// YS), so it exercises the real cheapest-first winner path in Results.
-const inScope = (r) => {
-  const n = String(r?.name || '').toLowerCase();
-  return n.includes('mcdonald') || n.includes('burger king') || n.includes('cajun');
-};
+// Scope guard: the 10 restaurants with real scraped price data, matched on
+// exact backend slug (never on name — apostrophes and Turkish İ/ı/ü make
+// name matching fragile). Anything else (e.g. Komagene) stays hidden.
+// Note: burgerking has NO hyphen; all other multi-word slugs are hyphenated.
+const IN_SCOPE_SLUGS = new Set([
+  'mcdonalds', 'burgerking', 'cajun-corner', 'popeyes', 'kofteci-yusuf',
+  'tavuk-dunyasi', 'usta-donerci', 'maydonoz-doner', 'dominos', 'pizza-bulls',
+]);
+const inScope = (r) => IN_SCOPE_SLUGS.has(r?.slug);
 
 // Glyph for a REAL menu_items.category label. Returns null for promo/combo
 // categories (Menüler, Coca-Cola Fırsat Menüleri, Happy Meal, Çocuk Menüleri…)
@@ -26,7 +28,8 @@ const inScope = (r) => {
 const categoryFood = (c) => {
   const n = String(c).toLowerCase();
   if (n.includes('burger'))                          return 'burger';
-  if (n.includes('dürüm') || n.includes('durum') || n.includes('wrap')) return 'wrap';
+  if (n.includes('dürüm') || n.includes('durum') || n.includes('wrap') || n.includes('döner') || n.includes('doner')) return 'wrap';
+  if (n.includes('köfte') || n.includes('kofte'))    return 'sandwich';
   if (n.includes('tavuk') || n.includes('chicken') || n.includes('nugget')) return 'chicken';
   if (n.includes('pizza'))                           return 'pizza';
   if (n.includes('kahve') || n.includes('coffee'))   return 'coffee';

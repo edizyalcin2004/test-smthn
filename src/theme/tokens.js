@@ -15,6 +15,14 @@ export const T = {
   gold:     '#F5A524',
   orange:   '#FF7A1A',
   cajun:    '#EE9B2E', // Cajun Corner tile accent (warm orange wordmark outline)
+  // restaurant tile accents — brand-EVOKING colours only, never logos (IP-safe)
+  popeyes:       '#FF7D00', // saturated orange
+  kofteciYusuf:  '#A31621', // deep crimson
+  tavukDunyasi:  '#E2001A', // bright red
+  ustaDonerci:   '#8C5A2B', // bronze / döner warmth
+  maydonozDoner: '#2F9E44', // maydonoz = parsley → green
+  dominos:       '#006491', // deep blue
+  pizzaBulls:    '#262A33', // charcoal
   coral:    '#FF5A4E',
   red:      '#E94235',
   green:    '#2BAE66',

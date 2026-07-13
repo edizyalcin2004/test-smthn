@@ -43,17 +43,28 @@ export function restaurantBrand(restaurant) {
 
 // Per-restaurant tile style: a brand-evoking colour + a food glyph from the
 // swapped icon set. NOT a logo (logos are an IP risk) — just a coloured icon
-// tile. Only the two REAL in-scope restaurants have entries; anything else
-// gets a neutral navy fallback so nothing breaks if data expands.
-// Colours are brand-evoking defaults — Ediz can swap to palette tokens.
+// tile. All 10 REAL in-scope restaurants have entries; anything else gets a
+// neutral navy fallback so nothing breaks if data expands.
+// Matching: exact backend slug first (callers with /restaurants objects),
+// then name substring (DealsScreen only has restaurant_name). Substrings
+// dodge the hazards: 'domino' (apostrophe-free), 'bulls' not 'pizza' (so
+// Domino's Pizza can't collide), plain-ASCII picks over Turkish ü/ı.
 const RESTAURANT_TILES = [
-  { match: 'mcdonald',    bg: '#DA291C',  food: 'burger' },  // McDonald's red
-  { match: 'burger king', bg: '#1B2A4A',  food: 'burger' },  // BK navy
-  { match: 'cajun',       bg: T.cajun,    food: 'chicken' }, // Cajun Corner — chicken glyph (NOT a logo), warm-orange token
+  { slug: 'mcdonalds',      match: 'mcdonald',    bg: '#DA291C',        food: 'burger' },  // McDonald's red
+  { slug: 'burgerking',     match: 'burger king', bg: '#1B2A4A',        food: 'burger' },  // BK navy
+  { slug: 'cajun-corner',   match: 'cajun',       bg: T.cajun,          food: 'chicken' },
+  { slug: 'popeyes',        match: 'popeyes',     bg: T.popeyes,        food: 'chicken' },
+  { slug: 'kofteci-yusuf',  match: 'yusuf',       bg: T.kofteciYusuf,   food: 'sandwich' }, // köfte-ekmek
+  { slug: 'tavuk-dunyasi',  match: 'tavuk',       bg: T.tavukDunyasi,   food: 'chicken' },
+  { slug: 'usta-donerci',   match: 'usta',        bg: T.ustaDonerci,    food: 'wrap' },
+  { slug: 'maydonoz-doner', match: 'maydonoz',    bg: T.maydonozDoner,  food: 'wrap' },
+  { slug: 'dominos',        match: 'domino',      bg: T.dominos,        food: 'pizza' },
+  { slug: 'pizza-bulls',    match: 'bulls',       bg: T.pizzaBulls,     food: 'pizza' },
 ];
 export function restaurantTile(restaurant) {
+  const slug = restaurant?.slug;
   const n = String(restaurant?.name || '').toLowerCase();
-  const hit = RESTAURANT_TILES.find((t) => n.includes(t.match));
+  const hit = RESTAURANT_TILES.find((t) => (slug && slug === t.slug) || n.includes(t.match));
   if (hit) return { bg: hit.bg, food: hit.food };
   return { bg: T.navy, food: 'delivery-bag' };
 }

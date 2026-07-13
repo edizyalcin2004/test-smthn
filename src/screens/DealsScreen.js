@@ -340,6 +340,13 @@ function BundleCard({ bundle, food }) {
           <View style={s.bundleFoodTile}><Food name={food} s={34} /></View>
           <Text style={s.bundleName}>{bundle.name}</Text>
         </View>
+        {/* design element — deep links to platforms don't exist yet */}
+        <View style={s.goRow}>
+          <Pressable style={({ pressed }) => [s.goBtn, pressed && { opacity: 0.85 }]} onPress={() => {}}>
+            <Text style={s.goBtnText}>Uygulamaya git</Text>
+            <Icon name="chevR" s={13} c="#fff" sw={2.6} />
+          </Pressable>
+        </View>
       </View>
       {/* exclusivity footer */}
       <View style={s.bundleFooter}>
@@ -435,6 +442,9 @@ const s = StyleSheet.create({
   bundleNameRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 13 },
   bundleFoodTile: { width: 46, height: 46, borderRadius: 13, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' },
   bundleName:     { flex: 1, minWidth: 0, fontSize: 14.5, fontFamily: font.bold, color: T.ink, lineHeight: 19, letterSpacing: -0.14, paddingTop: 2 },
+  goRow:          { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 13 },
+  goBtn:          { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: T.navy, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 15 },
+  goBtnText:      { fontSize: 13, fontFamily: font.extrabold, color: '#fff', letterSpacing: -0.13 },
   bundleFooter:   { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: T.bg, borderTopWidth: 1, borderTopColor: T.line },
   checkDot:       { width: 18, height: 18, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   footerText:     { fontSize: 12, fontFamily: font.bold, color: T.sub },

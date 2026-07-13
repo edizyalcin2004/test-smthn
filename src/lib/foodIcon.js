@@ -23,8 +23,14 @@ const RULES = [
   [/(burger|big mac|whopper|king|köfte|hamburger|cheeseburger)/,      'burger'],
 ];
 
+// Foods with a dedicated combo-tray glyph (burger-menu, chicken-menu, …).
+const MENU_VARIANTS = new Set(['burger', 'chicken', 'pizza', 'wrap']);
+
 export function foodIconFor(name = '', category = '') {
   const hay = `${name} ${category}`.toLowerCase();
-  for (const [re, icon] of RULES) if (re.test(hay)) return icon;
-  return 'burger'; // neutral fallback for a burger-chain MVP
+  const combo = /(menü|menu|combo)/.test(hay);
+  for (const [re, icon] of RULES) {
+    if (re.test(hay)) return combo && MENU_VARIANTS.has(icon) ? `${icon}-menu` : icon;
+  }
+  return combo ? 'burger-menu' : 'burger'; // neutral fallback for a burger-chain MVP
 }

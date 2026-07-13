@@ -1,10 +1,12 @@
-// CompareScreen — stack wrapper (Search → Menu → Results) plus Compare-level
-// state. Basket + ranked results live here so they survive navigating
-// Menu → Results → back. Switching restaurant resets the basket.
+// CompareScreen — stack wrapper (Search → Menu → Basket → Results) plus
+// Compare-level state. Basket + ranked results live here so they survive
+// navigating Menu → Basket → Results → back. Switching restaurant resets
+// the basket.
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SearchScreen  from './compare/SearchScreen';
 import MenuScreen    from './compare/MenuScreen';
+import BasketScreen  from './compare/BasketScreen';
 import ResultsScreen from './compare/ResultsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -44,6 +46,7 @@ export default function CompareScreen() {
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <Stack.Screen name="Search"  component={SearchScreen} />
         <Stack.Screen name="Menu"    component={MenuScreen} />
+        <Stack.Screen name="Basket"  component={BasketScreen} />
         <Stack.Screen name="Results" component={ResultsScreen} />
       </Stack.Navigator>
     </CompareContext.Provider>

@@ -1,5 +1,9 @@
-// MenuScreen — navy/gold rebuild, wired live. Reads /menu, builds a basket in
-// Compare-level state, then POSTs /compare-basket and navigates to Results.
+// MenuScreen — navy/gold rebuild, wired live. Reads /menu and builds a basket
+// in Compare-level state. Continuous scroll with one section per REAL backend
+// category; the category chips scroll-spy the list (tap → jump to section).
+// The bottom bar goes to the Basket review screen — comparing happens there.
+// No item customization: the backend prices flat items, so tapping + adds one
+// unit; quantities are adjusted on the Basket screen. No invented options.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet,
@@ -10,14 +14,14 @@ import { RoundBtn } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { foodIconFor } from '../../lib/foodIcon';
-import { getMenu, compareBasket } from '../../api/client';
+import { getMenu } from '../../api/client';
 import { useCompare } from '../CompareScreen';
 
-const ALL = 'Tümü';
+const SPY_OFFSET = 70; // px below the chips where a section counts as "current"
 
 export default function MenuScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const { restaurant: ctxRestaurant, setRestaurant, basket, setQty, setResults } = useCompare();
+  const { restaurant: ctxRestaurant, setRestaurant, basket, setQty } = useCompare();
   const restaurant = route.params?.restaurant ?? ctxRestaurant;
 
   // Reconcile Compare-level restaurant with whatever we navigated in with
@@ -28,13 +32,12 @@ export default function MenuScreen({ route, navigation }) {
     }
   }, [restaurant, ctxRestaurant, setRestaurant]);
 
-  const [items, setItems]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
-  const [comparing, setComparing] = useState(false);
-  const [tab, setTab]           = useState(ALL);
-  const [fav, setFav]           = useState(false);
-  const mounted                 = useRef(true);
+  const [items, setItems]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const [tab, setTab]         = useState(null);
+  const [fav, setFav]         = useState(false);
+  const mounted               = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
 
   const load = useCallback(async () => {
@@ -52,19 +55,47 @@ export default function MenuScreen({ route, navigation }) {
   }, [restaurant]);
   useEffect(() => { load(); }, [load]);
 
-  const tabs = useMemo(() => {
-    const cats = [];
+  // One section per real category, in backend order.
+  const sections = useMemo(() => {
+    const order = [];
+    const byCat = new Map();
     for (const it of items) {
       const c = it.category || 'Diğer';
-      if (!cats.includes(c)) cats.push(c);
+      if (!byCat.has(c)) { byCat.set(c, []); order.push(c); }
+      byCat.get(c).push(it);
     }
-    return [ALL, ...cats];
+    return order.map((c) => ({ cat: c, items: byCat.get(c) }));
   }, [items]);
+  useEffect(() => { if (sections.length && !tab) setTab(sections[0].cat); }, [sections, tab]);
 
-  const visible = useMemo(
-    () => (tab === ALL ? items : items.filter((it) => (it.category || 'Diğer') === tab)),
-    [items, tab],
-  );
+  // scroll-spy plumbing
+  const scrollRef      = useRef(null);
+  const sectionY       = useRef({});           // cat -> content y
+  const clickScrolling = useRef(false);
+  const spyTimer       = useRef(null);
+
+  const onScroll = useCallback((e) => {
+    if (clickScrolling.current) return;
+    const y = e.nativeEvent.contentOffset.y + SPY_OFFSET;
+    let cur = sections[0]?.cat;
+    for (const sec of sections) {
+      const top = sectionY.current[sec.cat];
+      if (top != null && top <= y) cur = sec.cat;
+    }
+    if (cur) setTab(cur);
+  }, [sections]);
+
+  const jumpTo = useCallback((cat) => {
+    setTab(cat);
+    const y = sectionY.current[cat];
+    if (scrollRef.current && y != null) {
+      clickScrolling.current = true;
+      scrollRef.current.scrollTo({ y: Math.max(0, y - 10), animated: true });
+      clearTimeout(spyTimer.current);
+      spyTimer.current = setTimeout(() => { clickScrolling.current = false; }, 500);
+    }
+  }, []);
+  useEffect(() => () => clearTimeout(spyTimer.current), []);
 
   const basketLines = useMemo(() => Object.values(basket), [basket]);
   const count = useMemo(() => basketLines.reduce((a, { qty }) => a + qty, 0), [basketLines]);
@@ -72,26 +103,6 @@ export default function MenuScreen({ route, navigation }) {
     () => basketLines.reduce((sum, { item, qty }) => sum + Number(item.price || 0) * qty, 0),
     [basketLines],
   );
-
-  const compare = useCallback(async () => {
-    if (!basketLines.length || !restaurant) return;
-    setComparing(true);
-    setError(null);
-    try {
-      // Response is already ranked by effective total ascending.
-      const ranked = await compareBasket(
-        restaurant.id,
-        basketLines.map(({ item, qty }) => ({ id: item.id, name: item.name, qty })),
-      );
-      if (!mounted.current) return;
-      setResults(ranked);
-      navigation.navigate('Results');
-    } catch {
-      if (mounted.current) setError('Karşılaştırma başarısız. Bağlantını kontrol edip tekrar dene.');
-    } finally {
-      if (mounted.current) setComparing(false);
-    }
-  }, [basketLines, restaurant, navigation, setResults]);
 
   return (
     <View style={s.root}>
@@ -106,15 +117,15 @@ export default function MenuScreen({ route, navigation }) {
         </RoundBtn>
       </View>
 
-      {/* category tabs */}
-      {!loading && !error && items.length > 0 ? (
+      {/* category chips (scroll-spy) */}
+      {!loading && !error && sections.length > 0 ? (
         <View style={s.tabsWrap}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsRow}>
-            {tabs.map((t) => {
-              const active = t === tab;
+            {sections.map(({ cat }) => {
+              const active = cat === tab;
               return (
-                <Pressable key={t} onPress={() => setTab(t)} style={[s.tab, active && s.tabActive]}>
-                  <Text style={[s.tabText, active && s.tabTextActive]} numberOfLines={1}>{t}</Text>
+                <Pressable key={cat} onPress={() => jumpTo(cat)} style={[s.tab, active && s.tabActive]}>
+                  <Text style={[s.tabText, active && s.tabTextActive]} numberOfLines={1}>{cat}</Text>
                 </Pressable>
               );
             })}
@@ -133,64 +144,64 @@ export default function MenuScreen({ route, navigation }) {
         <View style={s.center}><Text style={s.empty}>Menü bulunamadı</Text></View>
       ) : (
         <ScrollView
+          ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={32}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: count ? 160 : 110 }}
         >
-          {visible.map((it, i) => {
-            const qty = basket[it.id]?.qty ?? 0;
-            return (
-              <View key={String(it.id)} style={[s.itemRow, i < visible.length - 1 && s.itemBorder]}>
-                <View style={s.thumb}><Food name={foodIconFor(it.name, it.category)} s={42} /></View>
-                <View style={s.itemMeta}>
-                  <Text style={s.itemName} numberOfLines={2}>{it.name}</Text>
-                  {it.price != null ? <Text style={s.itemPrice}>{money(it.price)}</Text> : null}
-                </View>
-                <Stepper
-                  qty={qty}
-                  onMinus={() => setQty(it, qty - 1)}
-                  onPlus={() => setQty(it, qty + 1)}
-                />
+          {sections.map((sec) => (
+            <View key={sec.cat} onLayout={(e) => { sectionY.current[sec.cat] = e.nativeEvent.layout.y; }}>
+              <View style={s.secHead}>
+                <Text style={s.secTitle}>{sec.cat}</Text>
+                <Text style={s.secCount}>{sec.items.length} ürün</Text>
+                <View style={s.secRule} />
               </View>
-            );
-          })}
+              {sec.items.map((it) => {
+                const qty = basket[it.id]?.qty ?? 0;
+                const active = qty > 0;
+                return (
+                  <Pressable
+                    key={String(it.id)}
+                    onPress={() => setQty(it, qty + 1)}
+                    style={({ pressed }) => [s.itemCard, active && s.itemCardActive, pressed && s.itemPressed]}
+                  >
+                    <View style={s.thumb}>
+                      <Food name={foodIconFor(it.name, it.category)} s={44} />
+                      {qty > 0 ? (
+                        <View style={s.thumbBadge}><Text style={s.thumbBadgeText}>{qty}</Text></View>
+                      ) : null}
+                    </View>
+                    <View style={s.itemMeta}>
+                      <Text style={s.itemName} numberOfLines={2}>{it.name}</Text>
+                      {it.price != null ? <Text style={s.itemPrice}>{money(it.price)}</Text> : null}
+                    </View>
+                    <View style={s.addBtn}><Icon name="plus" s={19} c="#fff" sw={2.6} /></View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
         </ScrollView>
       )}
 
       {error && !loading && items.length > 0 ? <Text style={s.errBanner}>{error}</Text> : null}
 
-      {/* compare bar */}
+      {/* bottom basket bar → review */}
       {count > 0 && !loading ? (
         <View style={[s.barWrap, { paddingBottom: insets.bottom + 12 }]}>
           <Pressable
-            onPress={compare}
-            disabled={comparing}
-            style={({ pressed }) => [s.bar, (pressed || comparing) && s.barDim]}
+            onPress={() => navigation.navigate('Basket')}
+            style={({ pressed }) => [s.bar, pressed && s.barDim]}
           >
             <View style={s.barLeft}>
               <View style={s.barCount}><Text style={s.barCountText}>{count}</Text></View>
-              <Text style={s.barLabel}>ürün · Sepeti karşılaştır</Text>
+              <Text style={s.barLabel}>ürün · Sepeti incele</Text>
             </View>
-            {comparing ? <ActivityIndicator color="#fff" /> : <Text style={s.barTotal}>{money(total)}</Text>}
+            <Text style={s.barTotal}>{money(total)}</Text>
           </Pressable>
         </View>
       ) : null}
-    </View>
-  );
-}
-
-function Stepper({ qty, onMinus, onPlus }) {
-  if (qty === 0) {
-    return (
-      <Pressable onPress={onPlus} style={s.addBtn} hitSlop={6}>
-        <Icon name="plus" s={18} c={T.blue} sw={2.4} />
-      </Pressable>
-    );
-  }
-  return (
-    <View style={s.stepper}>
-      <Pressable onPress={onMinus} style={s.stepMinus} hitSlop={6}><Icon name="minus" s={16} c={T.ink} sw={2.4} /></Pressable>
-      <Text style={s.stepQty}>{qty}</Text>
-      <Pressable onPress={onPlus} style={s.stepPlus} hitSlop={6}><Icon name="plus" s={16} c="#fff" sw={2.4} /></Pressable>
     </View>
   );
 }
@@ -216,18 +227,29 @@ const s = StyleSheet.create({
   retry:      { marginTop: 14, paddingVertical: 10, paddingHorizontal: 22 },
   retryText:  { fontSize: 14, fontFamily: font.bold, color: T.blue },
 
-  itemRow:    { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14 },
-  itemBorder: { borderBottomWidth: 1, borderBottomColor: T.line },
-  thumb:      { width: 60, height: 60, borderRadius: 15, backgroundColor: T.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: T.line },
+  secHead:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 16, paddingBottom: 12, paddingHorizontal: 2 },
+  secTitle:   { fontSize: 17, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.2 },
+  secCount:   { fontSize: 12, fontFamily: font.bold, color: T.faint },
+  secRule:    { flex: 1, height: 1, backgroundColor: T.line },
+
+  itemCard:   {
+    flexDirection: 'row', alignItems: 'center', gap: 13,
+    backgroundColor: T.white, borderRadius: 18, padding: 13, marginBottom: 11,
+    borderWidth: 1, borderColor: T.line,
+  },
+  itemCardActive: { borderWidth: 1.5, borderColor: T.blue },
+  itemPressed:    { opacity: 0.75 },
+  thumb:      { width: 62, height: 62, borderRadius: 15, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' },
+  thumbBadge: {
+    position: 'absolute', top: -6, right: -6, minWidth: 20, height: 20, paddingHorizontal: 5,
+    borderRadius: 999, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: T.white,
+  },
+  thumbBadgeText: { fontSize: 11, fontFamily: font.extrabold, color: '#fff' },
   itemMeta:   { flex: 1, minWidth: 0 },
   itemName:   { fontSize: 14.5, fontFamily: font.extrabold, color: T.ink, lineHeight: 19 },
-  itemPrice:  { fontSize: 14.5, fontFamily: font.extrabold, color: T.ink, marginTop: 6 },
-
-  addBtn:     { width: 34, height: 34, borderRadius: 11, backgroundColor: T.blueSoft, alignItems: 'center', justifyContent: 'center' },
-  stepper:    { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.white, borderRadius: 11, padding: 3, borderWidth: 1, borderColor: T.line },
-  stepMinus:  { width: 30, height: 30, borderRadius: 9, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' },
-  stepQty:    { minWidth: 22, textAlign: 'center', fontSize: 14.5, fontFamily: font.extrabold, color: T.ink },
-  stepPlus:   { width: 30, height: 30, borderRadius: 9, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center' },
+  itemPrice:  { fontSize: 14, fontFamily: font.extrabold, color: T.ink, marginTop: 7 },
+  addBtn:     { width: 34, height: 34, borderRadius: 11, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center' },
 
   barWrap:    { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16 },
   bar:        { backgroundColor: T.navy, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

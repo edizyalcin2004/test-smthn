@@ -230,7 +230,7 @@ suppress fabricated data values. Per-item audit vs design-ref screen-*.jsx:
 Baseline before this work: commit `9d81628` (clean tree, in sync with origin/main).
 
 ## Fix 1 — Icon swap ✅
-Compared `~/Documents/pryce-design-ref-19/assets/icons/` (25 SVGs) vs app's
+Compared `~/dev/pryce-design-ref-19/assets/icons/` (25 SVGs) vs app's
 `assets/icons/` (22 SVGs).
 
 **Overwritten (7 — these differed; 15 others byte-identical, no write needed):**

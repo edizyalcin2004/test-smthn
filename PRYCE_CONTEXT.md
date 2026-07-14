@@ -35,8 +35,8 @@ Python          Always use python3 (not python) to run scripts
 ## FILE LOCATIONS
 
 ```
-~/Documents/pryce-backend/   Backend (FastAPI)
-~/Documents/pryce-app/       Frontend (Expo)
+~/dev/pryce-backend/   Backend (FastAPI)
+~/dev/pryce-app/       Frontend (Expo)
 ```
 
 ---
@@ -134,7 +134,7 @@ its own app, Trendyol Yemek, and Yemeksepeti.
 ## FRONTEND — KEY FILES
 
 ```
-~/Documents/pryce-app/
+~/dev/pryce-app/
   App.js                      Entry point
   src/
     navigation/TabBar.js      Custom animated tab bar (DONE)
@@ -296,7 +296,7 @@ Each convo: state the task → get Claude Code prompt → execute → paste outp
 
 If starting in Claude Code: claude-mem will inject terminal session history.
 
-If starting in Claude.ai: paste `find ~/Documents/pryce-backend -not -path '*/.git/*' | sort` and key file contents to reconstruct state.
+If starting in Claude.ai: paste `find ~/dev/pryce-backend -not -path '*/.git/*' | sort` and key file contents to reconstruct state.
 Claude Code sessions must be chunked into small loops:
 1. Read files only → paste output to Claude.ai
 2. Write one script or fix → run it → paste output

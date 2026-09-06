@@ -12,7 +12,7 @@
 // Incomplete platforms are shown separately, never ranked, never badged, and
 // never with a headline price (a truncated total must not read as "cheapest").
 // No delivery/ETA is shown — the backend returns none, so we invent none.
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
 import { RoundBtn, Brand, Pill } from '../../components/ui';
@@ -20,11 +20,13 @@ import { Icon } from '../../components/icons';
 import { platformBrand } from '../../lib/brand';
 import { useCompare } from '../CompareScreen';
 import { useCodeSheet } from '../../components/CodeSheet';
+import { comparable } from '../../lib/options';
+import { openOrderLink, safeOrderURL } from '../../lib/orderLinks';
 
 const num = (v) => Number(v ?? 0);
 const hasCode = (p) => p.total_after_code != null && p.best_code != null;
 const effective = (p) => num(hasCode(p) ? p.total_after_code : p.total);
-const allFound = (p) => (p.items ?? []).length > 0 && p.items.every((it) => it.found);
+const allFound = comparable;
 
 function usageCaveat(u) {
   if (u === 'once_per_user') return 'Kullanıcı başına 1 kez';
@@ -63,7 +65,7 @@ export default function ResultsScreen({ navigation }) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         {isSingle ? (
           <Text style={s.note}>
-            Bu restoran tek platformda satılıyor — karşılaştırılacak başka fiyat yok.
+            Bu sepet için şu anda yalnızca bir platformda doğrulanmış tutar var.
           </Text>
         ) : null}
 
@@ -95,13 +97,6 @@ export default function ResultsScreen({ navigation }) {
           </View>
         ) : null}
 
-        {/* Filtrele & Sırala (design element; sort/filter not yet wired) */}
-        {rows.length > 0 ? (
-          <Pressable style={s.filterBtn} onPress={() => {}}>
-            <Icon name="filter" s={18} c="#fff" />
-            <Text style={s.filterText}>Filtrele &amp; Sırala</Text>
-          </Pressable>
-        ) : null}
       </ScrollView>
     </View>
   );
@@ -146,12 +141,19 @@ function PlatformCard({ p, rank, winner, onCode }) {
         </View>
       </View>
 
+      <Text style={s.noCode}>Ürün toplamı · teslimat ücretleri hariç</Text>
+      {safeOrderURL(p.order_url) ? <Pressable accessibilityRole="link" style={s.filterBtn}
+        onPress={async () => { if (!await openOrderLink(p.order_url, Linking.openURL))
+          Alert.alert('Bağlantı açılamadı', 'Lütfen platformu uygulamandan aç.'); }}>
+        <Text style={s.filterText}>{p.order_link_kind === 'restaurant' ? 'Restoranı aç' : 'Platformu aç'}</Text>
+      </Pressable> : null}
+      <Text style={s.noCode}>Sepet otomatik aktarılmaz. Açılan platformda şube, adres ve seçenekleri kontrol et.</Text>
       <View style={s.lines}>
         {(p.items ?? []).map((it, j) => (
           <Text key={String(j)} style={s.line}>
             {it.found && it.price != null
               ? `${it.name}: ${money(it.price)}`
-              : `${it.name}: bu platformda bulunamadı`}
+              : `${it.name}: seçenek veya fiyat doğrulanamadı`}
           </Text>
         ))}
       </View>
@@ -172,10 +174,10 @@ function IncompleteCard({ p }) {
         <Text key={String(j)} style={s.line}>
           {it.found && it.price != null
             ? `${it.name}: ${money(it.price)}`
-            : `${it.name}: bu platformda bulunamadı`}
+            : `${it.name}: seçenek veya fiyat doğrulanamadı`}
         </Text>
       ))}
-      <Text style={s.incCaveat}>{missing} ürün bulunamadı — toplam karşılaştırmaya dahil edilmedi</Text>
+      <Text style={s.incCaveat}>{missing} ürün doğrulanamadı — toplam karşılaştırmaya dahil edilmedi</Text>
     </View>
   );
 }

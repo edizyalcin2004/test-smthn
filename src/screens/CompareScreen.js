@@ -31,18 +31,24 @@ export default function CompareScreen() {
   }, []);
 
   const setQty = useCallback((item, qty) => {
+    setResults(null);
     setBasket((prev) => {
       const next = { ...prev };
       if (qty <= 0) delete next[item.id];
-      else next[item.id] = { item, qty };
+      else next[item.id] = { ...prev[item.id], item, qty };
       return next;
     });
+  }, []);
+
+  const setConfiguration = useCallback((itemId, sourceConfiguration, optionSummary) => {
+    setResults(null);
+    setBasket(prev => prev[itemId] ? { ...prev, [itemId]: { ...prev[itemId], sourceConfiguration, optionSummary } } : prev);
   }, []);
 
   const clearBasket = useCallback(() => { setBasket({}); setResults(null); }, []);
 
   return (
-    <CompareContext.Provider value={{ restaurant, setRestaurant, basket, setQty, clearBasket, results, setResults }}>
+    <CompareContext.Provider value={{ restaurant, setRestaurant, basket, setQty, setConfiguration, clearBasket, results, setResults }}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <Stack.Screen name="Search"  component={SearchScreen} />
         <Stack.Screen name="Menu"    component={MenuScreen} />

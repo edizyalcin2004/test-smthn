@@ -1,7 +1,5 @@
 // BasketScreen — "Sepetin" review step between Menu and Results.
-// Lines are REAL menu items with a quantity (no customization — the backend
-// prices flat items, so there is nothing to edit; Düzenle from the design is
-// deliberately omitted). Çoğalt bumps qty, Kaldır removes the line.
+// Each line carries one source configuration; other platforms require proven equivalence.
 // POSTs /compare-basket from here and navigates to Results.
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
@@ -12,23 +10,23 @@ import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { foodIconFor } from '../../lib/foodIcon';
 import { compareBasket } from '../../api/client';
+import OptionSheet from '../../components/OptionSheet';
+import { basketRequest } from '../../lib/options';
 import { useCompare } from '../CompareScreen';
 
 export default function BasketScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { restaurant, basket, setQty, setResults } = useCompare();
+  const { restaurant, basket, setQty, setConfiguration, setResults } = useCompare();
+  const [editing, setEditing] = useState(null);
   const [comparing, setComparing] = useState(false);
   const [error, setError]         = useState(null);
   const mounted                   = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  const current = useRef({ basket, restaurant });
+  current.current = { basket, restaurant };
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const lines = useMemo(() => Object.values(basket), [basket]);
   const count = useMemo(() => lines.reduce((a, { qty }) => a + qty, 0), [lines]);
-  const subtotal = useMemo(
-    () => lines.reduce((sum, { item, qty }) => sum + Number(item.price || 0) * qty, 0),
-    [lines],
-  );
-
   const compare = useCallback(async () => {
     if (!lines.length || !restaurant) return;
     setComparing(true);
@@ -37,9 +35,10 @@ export default function BasketScreen({ navigation }) {
       // Response is already ranked by effective total ascending.
       const ranked = await compareBasket(
         restaurant.id,
-        lines.map(({ item, qty }) => ({ id: item.id, name: item.name, qty })),
+        basketRequest(lines),
       );
-      if (!mounted.current) return;
+      if (!mounted.current || current.current.basket !== basket ||
+          current.current.restaurant !== restaurant || !navigation.isFocused()) return;
       setResults(ranked);
       navigation.navigate('Results');
     } catch {
@@ -47,10 +46,12 @@ export default function BasketScreen({ navigation }) {
     } finally {
       if (mounted.current) setComparing(false);
     }
-  }, [lines, restaurant, navigation, setResults]);
+  }, [lines, basket, restaurant, navigation, setResults]);
 
   return (
     <View style={s.root}>
+      {editing && basket[editing] ? <OptionSheet line={basket[editing]} onClose={() => setEditing(null)}
+        onSave={(config, summary) => { setConfiguration(editing, config, summary); setEditing(null); }} /> : null}
       {/* header */}
       <View style={[s.header, { paddingTop: insets.top + 4 }]}>
         <RoundBtn onPress={() => navigation.goBack()} size={40}><Icon name="back" s={20} c={T.ink} /></RoundBtn>
@@ -74,7 +75,7 @@ export default function BasketScreen({ navigation }) {
           </View>
         ) : (
           <View style={{ gap: 12 }}>
-            {lines.map(({ item, qty }) => (
+            {lines.map(({ item, qty, optionSummary, sourceConfiguration }) => (
               <Card key={String(item.id)} pad={0} style={s.lineCard}>
                 <View style={s.lineBody}>
                   <View style={s.thumb}>
@@ -86,15 +87,17 @@ export default function BasketScreen({ navigation }) {
                   <View style={s.lineMeta}>
                     <View style={s.lineTop}>
                       <Text style={s.lineName} numberOfLines={2}>{item.name}</Text>
-                      <Text style={s.linePrice}>{money(Number(item.price || 0) * qty)}</Text>
+                      <Text style={s.linePrice}>{`${qty} adet`}</Text>
                     </View>
                     <Text style={s.lineSub} numberOfLines={1}>
-                      {qty > 1 ? `${qty} × ${money(item.price)}` : (item.category || '')}
+                      {optionSummary || (sourceConfiguration ? 'Seçenekler kaydedildi' : 'Seçenekleri kontrol et')}
                     </Text>
                   </View>
                 </View>
                 {/* actions */}
                 <View style={s.actions}>
+                  <ActBtn icon="edit" label="Seçenekler" onPress={() => setEditing(item.id)} />
+                  <View style={s.actRule} />
                   <ActBtn icon="copy" label="Çoğalt" onPress={() => setQty(item, qty + 1)} />
                   <View style={s.actRule} />
                   <ActBtn icon="minus" label="Azalt" onPress={() => setQty(item, qty - 1)} disabled={qty <= 1} />
@@ -107,7 +110,7 @@ export default function BasketScreen({ navigation }) {
             {/* honesty note — final price is computed in the comparison */}
             <View style={s.noteRow}>
               <Icon name="alert" s={14} c={T.faint} />
-              <Text style={s.noteText}>Nihai fiyat platform ve kodlara göre karşılaştırmada hesaplanır.</Text>
+              <Text style={s.noteText}>Ürün ve seçenek tutarları karşılaştırmada doğrulanır. Teslimat ücretleri dahil değildir.</Text>
             </View>
 
             {error ? <Text style={s.errText}>{error}</Text> : null}
@@ -127,7 +130,7 @@ export default function BasketScreen({ navigation }) {
               <Icon name="search" s={18} c="#fff" />
               <Text style={s.barLabel}>Fiyatları karşılaştır</Text>
             </View>
-            {comparing ? <ActivityIndicator color="#fff" /> : <Text style={s.barTotal}>{money(subtotal)}</Text>}
+            {comparing ? <ActivityIndicator color="#fff" /> : <Text style={s.barTotal}>{`${count} ürün`}</Text>}
           </Pressable>
         </View>
       ) : null}
@@ -178,7 +181,7 @@ const s = StyleSheet.create({
   lineSub:  { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 3 },
 
   actions:  { flexDirection: 'row', alignItems: 'stretch', borderTopWidth: 1, borderTopColor: T.line },
-  actBtn:   { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, paddingHorizontal: 8 },
+  actBtn:   { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, paddingHorizontal: 4 },
   actText:  { fontSize: 13, fontFamily: font.bold },
   actRule:  { width: 1, backgroundColor: T.line },
 

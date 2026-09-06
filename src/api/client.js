@@ -111,3 +111,8 @@ export function getDiscountCodes(restaurantId) {
 export function getSpecialDeals() {
   return request('/special-deals');
 }
+
+// Fresh native trees; unavailable/unknown choices must never become defaults.
+export function getItemOptions(itemId) {
+  return request(`/menu-items/${itemId}/options`);
+}

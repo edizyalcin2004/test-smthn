@@ -111,3 +111,9 @@ export function getDiscountCodes(restaurantId) {
 export function getSpecialDeals() {
   return request('/special-deals');
 }
+
+// D-030: anonymous "did you order / did prices match" answer. Fire-and-forget:
+// a failure here must never bother the user.
+export function postOrderFeedback(body) {
+  return request('/order-feedback', { method: 'POST', body });
+}

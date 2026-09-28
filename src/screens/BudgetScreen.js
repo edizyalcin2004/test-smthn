@@ -1,7 +1,7 @@
 // BudgetScreen — "Tasarruf": what the user saved with Pryce (D-030).
 // Every number comes from orders the user CONFIRMED in the return popup
-// (OrderCheck), stored on this phone only. Saved = most expensive complete
-// platform total minus what they paid; nothing is estimated or invented.
+// (OrderCheck), stored on this phone only. Saved = average of the other
+// complete platforms minus what they paid (D-031); nothing is invented.
 import { useState, useCallback } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -59,7 +59,7 @@ export default function BudgetScreen({ navigation }) {
               <Text style={s.heroTL}>₺</Text>
               <Text style={s.heroAmount}>{Number(sv.thisMonth).toLocaleString('tr-TR')}</Text>
             </View>
-            <Text style={s.heroSub}>en pahalı seçeneğe göre daha az ödedin</Text>
+            <Text style={s.heroSub}>diğer platformların ortalamasına göre daha az ödedin</Text>
             <View style={s.heroBadge}>
               <Icon name="check" s={13} c="#5FE0A0" sw={3} />
               <Text style={s.heroBadgeText}>{sv.count} onaylı sipariş</Text>

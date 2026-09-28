@@ -7,10 +7,10 @@ const P = (id, total, after = null) => ({ platform: { id, name: `P${id}` }, tota
 const basket = { 1: { item: { name: 'Big Mac' }, qty: 2 }, 2: { item: { name: 'Patates' }, qty: 1 } };
 const now = Date.UTC(2026, 8, 28, 7, 0);
 
-test('saved = most expensive minus what was paid, code-adjusted', () => {
+test('saved = average of the other platforms minus what was paid, code-adjusted', () => {
   const comparable = [P(1, 240, 200), P(2, 260), P(3, 300)];
   const p = buildPending({ restaurant: { id: 9, name: "McDonald's" }, basket, chosen: comparable[0], comparable, now });
-  assert.equal(p.paid, 200); assert.equal(p.mostExpensive, 300); assert.equal(p.saved, 100);
+  assert.equal(p.paid, 200); assert.equal(p.othersAvg, 280); assert.equal(p.saved, 80);
   assert.equal(p.codeSaved, 40); assert.equal(p.wasCheapest, true);
   assert.deepEqual(p.items, [{ name: 'Big Mac', qty: 2 }, { name: 'Patates', qty: 1 }]);
 });

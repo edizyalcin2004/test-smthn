@@ -11,12 +11,13 @@ import { Card, RoundBtn } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { foodIconFor } from '../../lib/foodIcon';
+import { randomId, compareContext } from '../../lib/telemetry';
 import { compareBasket } from '../../api/client';
 import { useCompare } from '../CompareScreen';
 
 export default function BasketScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { restaurant, basket, setQty, setResults } = useCompare();
+  const { restaurant, basket, setQty, setResults, setCompareId } = useCompare();
   const [comparing, setComparing] = useState(false);
   const [error, setError]         = useState(null);
   const mounted                   = useRef(true);
@@ -35,19 +36,22 @@ export default function BasketScreen({ navigation }) {
     setError(null);
     try {
       // Response is already ranked by effective total ascending.
+      const compareId = randomId();
       const ranked = await compareBasket(
         restaurant.id,
         lines.map(({ item, qty }) => ({ id: item.id, name: item.name, qty })),
+        { compare_id: compareId, client: await compareContext() },
       );
       if (!mounted.current) return;
       setResults(ranked);
+      setCompareId(compareId);
       navigation.navigate('Results');
     } catch {
       if (mounted.current) setError('Karşılaştırma başarısız. Bağlantını kontrol edip tekrar dene.');
     } finally {
       if (mounted.current) setComparing(false);
     }
-  }, [lines, restaurant, navigation, setResults]);
+  }, [lines, restaurant, navigation, setResults, setCompareId]);
 
   return (
     <View style={s.root}>

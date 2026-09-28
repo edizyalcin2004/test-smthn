@@ -4,6 +4,7 @@
 // the basket.
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { track } from '../lib/telemetry';
 import SearchScreen  from './compare/SearchScreen';
 import MenuScreen    from './compare/MenuScreen';
 import BasketScreen  from './compare/BasketScreen';
@@ -18,6 +19,7 @@ export default function CompareScreen() {
   const [restaurant, setRestaurantState] = useState(null);
   const [basket, setBasket]               = useState({}); // { [itemId]: { item, qty } }
   const [results, setResults]             = useState(null);
+  const [compareId, setCompareId]         = useState(null);
   const restaurantRef                     = useRef(null);
 
   // Setting a different restaurant clears the basket + stale results.
@@ -32,6 +34,11 @@ export default function CompareScreen() {
 
   const setQty = useCallback((item, qty) => {
     setBasket((prev) => {
+      const before = prev[item.id]?.qty ?? 0;
+      if (qty !== before && restaurantRef.current?.id) {
+        track({ event_name: 'basket_edit', restaurant_id: restaurantRef.current.id,
+                menu_item_id: item.id, delta: qty > before ? 1 : -1 });
+      }
       const next = { ...prev };
       if (qty <= 0) delete next[item.id];
       else next[item.id] = { item, qty };
@@ -42,7 +49,7 @@ export default function CompareScreen() {
   const clearBasket = useCallback(() => { setBasket({}); setResults(null); }, []);
 
   return (
-    <CompareContext.Provider value={{ restaurant, setRestaurant, basket, setQty, clearBasket, results, setResults }}>
+    <CompareContext.Provider value={{ restaurant, setRestaurant, basket, setQty, clearBasket, results, setResults, compareId, setCompareId }}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <Stack.Screen name="Search"  component={SearchScreen} />
         <Stack.Screen name="Menu"    component={MenuScreen} />

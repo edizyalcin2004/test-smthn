@@ -7,19 +7,23 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, Pressable, Modal, AppState, StyleSheet } from 'react-native';
 import { T, font, money } from '../theme/tokens';
 import { Icon } from './icons';
-import { loadPending, clearPending, confirmOrder } from '../lib/orders';
+import { loadPending, clearPending, confirmOrder, declineOrder } from '../lib/orders';
 import { pendingState, itemsLine } from '../lib/savings';
+
+const REASONS = [['item_price', 'Ürün fiyatı'], ['fee', 'Teslimat/hizmet ücreti'], ['code', 'Kod çalışmadı'],
+  ['unavailable', 'Ürün yoktu'], ['other', 'Diğer']];
 
 export default function OrderCheck({ onConfirmed }) {
   const [pending, setPending] = useState(null);
   const [matched, setMatched] = useState(null); // true | false | null
+  const [reason, setReason] = useState(null);
   const busy = useRef(false);
 
   const check = useCallback(async () => {
     const p = await loadPending();
     const st = pendingState(p, Date.now());
     if (st === 'expired') { await clearPending(); return; }
-    if (st === 'ask') { setMatched(null); setPending(p); }
+    if (st === 'ask') { setMatched(null); setReason(null); setPending(p); }
   }, []);
 
   useEffect(() => {
@@ -32,8 +36,8 @@ export default function OrderCheck({ onConfirmed }) {
     if (busy.current || !pending) return;
     busy.current = true;
     try {
-      if (yes) { await confirmOrder(pending, { matched }); onConfirmed?.(); }
-      else await clearPending();
+      if (yes) { await confirmOrder(pending, { matched, reason }); onConfirmed?.(); }
+      else await declineOrder(pending);
     } finally { busy.current = false; setPending(null); }
   };
 
@@ -51,7 +55,7 @@ export default function OrderCheck({ onConfirmed }) {
             {p.platform.name} · {money(p.paid)}
             {p.wasCheapest && p.platformsCompared >= 2 ? <Text> · en iyi <Text style={s.gold}>Pryce</Text> ile</Text> : null}
           </Text>
-          {p.saved > 0 ? <Text style={s.saved}>En pahalı seçeneğe göre {money(p.saved)} daha az</Text> : null}
+          {p.saved > 0 ? <Text style={s.saved}>Diğer platformların ortalamasına göre {money(p.saved)} daha az</Text> : null}
 
           <View style={s.buttons}>
             <Pressable style={[s.btn, s.no]} onPress={() => answer(false)} accessibilityRole="button">
@@ -73,6 +77,17 @@ export default function OrderCheck({ onConfirmed }) {
               </Pressable>
             ))}
           </View>
+          {matched === false ? (
+            <View style={s.reasons}>
+              {REASONS.map(([k, label]) => (
+                <Pressable key={k} onPress={() => setReason((r) => (r === k ? null : k))}
+                  style={[s.chip, reason === k && s.chipOn]} accessibilityRole="radio"
+                  accessibilityState={{ checked: reason === k }}>
+                  <Text style={[s.chipText, reason === k && s.chipTextOn]}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -95,6 +110,11 @@ const s = StyleSheet.create({
   checkRow:{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 14 },
   opt:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
   boxBad:  { backgroundColor: '#E5484D', borderColor: '#E5484D' },
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 10 },
+  chip:    { borderRadius: 999, borderWidth: 1, borderColor: T.faint, paddingVertical: 5, paddingHorizontal: 10 },
+  chipOn:  { backgroundColor: T.navy, borderColor: T.navy },
+  chipText:{ fontSize: 11.5, fontFamily: font.semibold, color: T.sub },
+  chipTextOn: { color: '#fff' },
   box:     { width: 16, height: 16, borderRadius: 4, borderWidth: 1.5, borderColor: T.faint, alignItems: 'center', justifyContent: 'center' },
   boxOn:   { backgroundColor: T.green, borderColor: T.green },
   checkText: { fontSize: 12, fontFamily: font.semibold, color: T.sub },

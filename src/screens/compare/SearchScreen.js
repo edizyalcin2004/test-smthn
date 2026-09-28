@@ -10,6 +10,7 @@ import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { restaurantTile } from '../../lib/brand';
 import { getRestaurants } from '../../api/client';
+import { track } from '../../lib/telemetry';
 
 // Scope guard: the 10 restaurants with real scraped price data, matched on
 // exact backend slug (never on name — apostrophes and Turkish İ/ı/ü make
@@ -89,7 +90,19 @@ export default function SearchScreen({ navigation }) {
     return [...byGlyph.entries()].map(([food, label]) => ({ label, food }));
   }, [all]);
 
-  const pick = useCallback((r) => navigation.navigate('Menu', { restaurant: r }), [navigation]);
+  const pick = useCallback((r) => {
+    track({ event_name: 'restaurant_view', restaurant_id: r.id, source: 'search' });
+    navigation.navigate('Menu', { restaurant: r });
+  }, [navigation]);
+
+  // T-027: a settled search (1.5s after typing stops) — normalised server-side;
+  // zero-result searches are the "unserved demand" signal.
+  useEffect(() => {
+    const needle = q.trim();
+    if (needle.length < 2 || loading) return undefined;
+    const t = setTimeout(() => track({ event_name: 'search', query: needle.slice(0, 80), result_count: list.length }), 1500);
+    return () => clearTimeout(t);
+  }, [q, list.length, loading]);
 
   return (
     <Screen>

@@ -6,6 +6,7 @@
 //   openCode(codeObject);
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+import { track } from '../lib/telemetry';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { T, font, money } from '../theme/tokens';
@@ -106,6 +107,7 @@ function CodeSheet({ code, onClose, navigationRef, resolveRestaurant }) {
   const goCompare = useCallback(() => {
     if (!restaurant || !navigationRef?.current) return;
     onClose();
+    track({ event_name: 'restaurant_view', restaurant_id: restaurant.id, source: 'code' });
     navigationRef.current.navigate('Compare', { screen: 'Menu', params: { restaurant } });
   }, [restaurant, navigationRef, onClose]);
 

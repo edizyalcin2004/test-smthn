@@ -1,22 +1,25 @@
 // Pure savings math for the order handoff (D-030). No storage, no clock of
 // its own — every function takes what it needs, so it is unit-testable.
 //
-// "Saved" = the most expensive complete platform total minus what the user
-// actually paid on the platform they ordered from (code-adjusted when a
-// verified code applied). Only counts when at least two platforms had a
-// complete basket: with one platform there is nothing to have saved against.
+// "Saved" (D-031) = the AVERAGE of the other complete platforms' totals minus
+// what the user actually paid on the platform they ordered from (code-adjusted
+// when a verified code applied). Not the most expensive: an average is the
+// defensible reference for a savings claim. Only counts when at least two
+// platforms had a complete basket; never negative.
 
 const num = (v) => Number(v ?? 0);
 export const effective = (p) =>
   num(p.total_after_code != null && p.best_code != null ? p.total_after_code : p.total);
 
-export function buildPending({ restaurant, basket, chosen, comparable, now }) {
+export function buildPending({ restaurant, basket, chosen, comparable, now, compareId = null }) {
   const totals = comparable.map(effective);
   const paid = effective(chosen);
-  const mostExpensive = totals.length ? Math.max(...totals) : paid;
-  const counted = comparable.length >= 2;
+  const others = comparable.filter((p) => p.platform.id !== chosen.platform.id).map(effective);
+  const othersAvg = others.length ? Math.round((others.reduce((a, b) => a + b, 0) / others.length) * 100) / 100 : paid;
+  const counted = others.length >= 1;
   return {
     id: `${now}-${chosen.platform.id}`,
+    compareId,
     at: now,
     restaurant: { id: restaurant?.id ?? null, name: restaurant?.name ?? '' },
     platform: { id: chosen.platform.id, name: chosen.platform.name, hex_color: chosen.platform.hex_color ?? null },
@@ -24,10 +27,10 @@ export function buildPending({ restaurant, basket, chosen, comparable, now }) {
     paid,
     listTotal: num(chosen.total),
     codeSaved: Math.max(0, num(chosen.total) - paid),
-    mostExpensive,
+    othersAvg,
     platformsCompared: comparable.length,
     wasCheapest: totals.length > 0 && paid <= Math.min(...totals),
-    saved: counted ? Math.max(0, mostExpensive - paid) : 0,
+    saved: counted ? Math.max(0, Math.round((othersAvg - paid) * 100) / 100) : 0,
   };
 }
 

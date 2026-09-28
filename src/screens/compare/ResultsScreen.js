@@ -23,6 +23,7 @@ import { useCodeSheet } from '../../components/CodeSheet';
 import { buildPending } from '../../lib/savings';
 import { savePending, clearPending } from '../../lib/orders';
 import { safeOrderURL } from '../../lib/orderLinks';
+import { track } from '../../lib/telemetry';
 
 const num = (v) => Number(v ?? 0);
 const hasCode = (p) => p.total_after_code != null && p.best_code != null;
@@ -37,7 +38,7 @@ function usageCaveat(u) {
 
 export default function ResultsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { restaurant, results, basket } = useCompare();
+  const { restaurant, results, basket, compareId } = useCompare();
   const { openCode } = useCodeSheet();
 
   const rows = results ?? [];
@@ -58,7 +59,15 @@ export default function ResultsScreen({ navigation }) {
   const orderOn = async (p) => {
     const url = safeOrderURL(p.order_url);
     if (!url) return;
-    await savePending(buildPending({ restaurant, basket, chosen: p, comparable, now: Date.now() }));
+    await savePending(buildPending({ restaurant, basket, chosen: p, comparable, now: Date.now(), compareId }));
+    if (compareId) {
+      const rank = comparable.findIndex((x) => x.platform.id === p.platform.id) + 1;
+      const cheapest = comparable.length ? effective(comparable[0]) : effective(p);
+      track({ event_name: 'handoff', compare_id: compareId, restaurant_id: restaurant.id,
+              platform_id: p.platform.id, rank: rank || null, was_cheapest: effective(p) <= cheapest,
+              gap_tl: String(Math.max(0, Math.round((effective(p) - cheapest) * 100) / 100)),
+              link_kind: p.order_link_kind ?? null });
+    }
     try { await Linking.openURL(url); }
     catch {
       await clearPending();

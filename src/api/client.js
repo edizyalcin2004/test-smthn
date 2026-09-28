@@ -69,11 +69,18 @@ export function getMenu(restaurantId) {
 // total — callers must surface it as unavailable, never as a number.
 // best_code is null unless EVERY condition is verifiably met backend-side;
 // callers must never invent or estimate a discount themselves.
-export function compareBasket(restaurantId, items) {
+// meta (T-027, optional): { compare_id, client } — a random per-comparison id
+// and on-device flags; never a user or device identifier.
+export function compareBasket(restaurantId, items, meta = {}) {
   return request('/compare-basket', {
     method: 'POST',
-    body: { restaurant_id: restaurantId, items },
+    body: { restaurant_id: restaurantId, items, ...meta },
   });
+}
+
+// T-027: anonymous usage events, strict server-side schemas.
+export function postEvents(body) {
+  return request('/events', { method: 'POST', body });
 }
 
 // GET /menu-items — all items with nested restaurant + per-platform prices:

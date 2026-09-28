@@ -32,7 +32,9 @@ export default function CompareScreen() {
     setRestaurantState(r);
   }, []);
 
-  const setQty = useCallback((item, qty) => {
+  // options (T-028, optional): {platform_id, choices, summary} — kept on the
+  // line until replaced; one configuration per item per basket.
+  const setQty = useCallback((item, qty, options) => {
     setBasket((prev) => {
       const before = prev[item.id]?.qty ?? 0;
       if (qty !== before && restaurantRef.current?.id) {
@@ -41,7 +43,7 @@ export default function CompareScreen() {
       }
       const next = { ...prev };
       if (qty <= 0) delete next[item.id];
-      else next[item.id] = { item, qty };
+      else next[item.id] = { item, qty, options: options !== undefined ? options : prev[item.id]?.options ?? null };
       return next;
     });
   }, []);

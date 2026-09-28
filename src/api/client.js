@@ -78,6 +78,14 @@ export function compareBasket(restaurantId, items, meta = {}) {
   });
 }
 
+// T-028: the option tree to configure an item on.
+// {menu_item_id, status: configurable|no_options|options_unavailable,
+//  reference_platform: {id, name}, fresh_platforms: [..],
+//  groups: [{id, name, min, max, parent_option_id, options: [{id, name}]}]}
+export function getItemOptions(itemId) {
+  return request(`/menu-items/${itemId}/options`);
+}
+
 // T-027: anonymous usage events, strict server-side schemas.
 export function postEvents(body) {
   return request('/events', { method: 'POST', body });

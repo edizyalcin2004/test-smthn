@@ -30,6 +30,13 @@ const hasCode = (p) => p.total_after_code != null && p.best_code != null;
 const effective = (p) => num(hasCode(p) ? p.total_after_code : p.total);
 const allFound = (p) => (p.items ?? []).length > 0 && p.items.every((it) => it.found);
 
+// T-028: why an item could not be priced with the chosen options on a platform.
+const lineText = (it) => it.found && it.price != null
+  ? `${it.name}: ${money(it.price)}`
+  : it.options_status && it.options_status !== 'priced'
+    ? `${it.name}: bu seçeneklerle karşılaştırılamıyor`
+    : `${it.name}: bu platformda bulunamadı`;
+
 function usageCaveat(u) {
   if (u === 'once_per_user') return 'Kullanıcı başına 1 kez';
   if (u === 'first_order')   return 'İlk siparişe özel';
@@ -86,6 +93,12 @@ export default function ResultsScreen({ navigation }) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        {Object.values(basket).some((l) => l.options?.unavailable) ? (
+          <Text style={s.note}>
+            {Object.values(basket).filter((l) => l.options?.unavailable).map((l) => l.item.name).join(', ')}:
+            güncel seçenek verisi yok, seçeneksiz (temel) fiyatla karşılaştırıldı — seçtiğin ekler fiyatı değiştirebilir.
+          </Text>
+        ) : null}
         {isSingle ? (
           <Text style={s.note}>
             Bu restoran tek platformda satılıyor — karşılaştırılacak başka fiyat yok.
@@ -168,9 +181,7 @@ function PlatformCard({ p, rank, winner, onCode, onOrder }) {
       <View style={s.lines}>
         {(p.items ?? []).map((it, j) => (
           <Text key={String(j)} style={s.line}>
-            {it.found && it.price != null
-              ? `${it.name}: ${money(it.price)}`
-              : `${it.name}: bu platformda bulunamadı`}
+            {lineText(it)}
           </Text>
         ))}
       </View>
@@ -193,6 +204,7 @@ function PlatformCard({ p, rank, winner, onCode, onOrder }) {
 function IncompleteCard({ p }) {
   const brand   = platformBrand(p.platform);
   const missing = (p.items ?? []).filter((it) => !it.found).length;
+  const optMissing = (p.items ?? []).filter((it) => !it.found && it.options_status && it.options_status !== 'priced').length;
   return (
     <View style={s.incCard}>
       <View style={s.incTop}>
@@ -201,12 +213,12 @@ function IncompleteCard({ p }) {
       </View>
       {(p.items ?? []).map((it, j) => (
         <Text key={String(j)} style={s.line}>
-          {it.found && it.price != null
-            ? `${it.name}: ${money(it.price)}`
-            : `${it.name}: bu platformda bulunamadı`}
+          {lineText(it)}
         </Text>
       ))}
-      <Text style={s.incCaveat}>{missing} ürün bulunamadı — toplam karşılaştırmaya dahil edilmedi</Text>
+      <Text style={s.incCaveat}>
+        {optMissing ? `${optMissing} ürün bu seçeneklerle karşılaştırılamıyor` : `${missing} ürün bulunamadı`} — toplam karşılaştırmaya dahil edilmedi
+      </Text>
     </View>
   );
 }

@@ -101,7 +101,7 @@ export default function ResultsScreen({ navigation }) {
         ) : null}
         {isSingle ? (
           <Text style={s.note}>
-            Bu restoran tek platformda satılıyor — karşılaştırılacak başka fiyat yok.
+            Bu sepet için yalnızca bir platformda doğrulanmış fiyat var.
           </Text>
         ) : null}
 
@@ -110,8 +110,8 @@ export default function ResultsScreen({ navigation }) {
           <PlatformCard
             key={String(p.platform.id)}
             p={p}
-            rank={isMulti ? i + 1 : null}
-            winner={isMulti && i === 0}
+            rank={isMulti ? 1 + comparable.filter((x) => effective(x) < effective(p)).length : null}
+            winner={isMulti && effective(p) === effective(comparable[0])}
             onCode={() => openRowCode(p)}
             onOrder={safeOrderURL(p.order_url) ? () => orderOn(p) : null}
           />

@@ -54,3 +54,12 @@ export function summary(groups, selected) {
     .flatMap((g) => g.options.filter((o) => selected.includes(o.id)).map((o) => o.name))
     .join(', ');
 }
+
+// No base-price fallback for a configuration whose options could not be verified.
+export function basketProblem(lines) {
+  if (lines.some((l) => l.options?.unavailable)) return 'Bazı ürünlerin seçenekleri doğrulanamıyor. Bu ürünleri sepetten çıkarıp tekrar eklemeyi dene.';
+  const names = lines.map((l) => l.item.name.toLowerCase());
+  if (lines.some((l) => l.options?.platform_id && names.filter((n) => n === l.item.name.toLowerCase()).length > 1))
+    return 'Aynı ürünün farklı yapılandırmaları tek sepette henüz desteklenmiyor.';
+  return null;
+}

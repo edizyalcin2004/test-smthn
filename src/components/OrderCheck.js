@@ -4,11 +4,11 @@
 // pair of options records whether our prices matched what they saw; that
 // answer goes to the backend anonymously (POST /order-feedback).
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, Pressable, Modal, AppState, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Modal, AppState, StyleSheet, TextInput } from 'react-native';
 import { T, font, money } from '../theme/tokens';
 import { Icon } from './icons';
 import { loadPending, clearPending, confirmOrder, declineOrder } from '../lib/orders';
-import { pendingState, itemsLine } from '../lib/savings';
+import { pendingState, itemsLine, parsePaid } from '../lib/savings';
 
 const REASONS = [['item_price', 'Ürün fiyatı'], ['fee', 'Teslimat/hizmet ücreti'], ['code', 'Kod çalışmadı'],
   ['unavailable', 'Ürün yoktu'], ['other', 'Diğer']];
@@ -17,13 +17,15 @@ export default function OrderCheck({ onConfirmed }) {
   const [pending, setPending] = useState(null);
   const [matched, setMatched] = useState(null); // true | false | null
   const [reason, setReason] = useState(null);
+  const [paidText, setPaidText] = useState('');
+  const [paidEdited, setPaidEdited] = useState(false);
   const busy = useRef(false);
 
   const check = useCallback(async () => {
     const p = await loadPending();
     const st = pendingState(p, Date.now());
     if (st === 'expired') { await clearPending(); return; }
-    if (st === 'ask') { setMatched(null); setReason(null); setPending(p); }
+    if (st === 'ask') { setMatched(null); setReason(null); setPaidText(Number(p.paid).toFixed(2)); setPaidEdited(false); setPending(p); }
   }, []);
 
   useEffect(() => {
@@ -33,10 +35,10 @@ export default function OrderCheck({ onConfirmed }) {
   }, [check]);
 
   const answer = async (yes) => {
-    if (busy.current || !pending) return;
+    if (busy.current || !pending || (yes && (parsePaid(paidText) === null || (matched === false && !paidEdited)))) return;
     busy.current = true;
     try {
-      if (yes) { await confirmOrder(pending, { matched, reason }); onConfirmed?.(); }
+      if (yes) { await confirmOrder(pending, { matched, reason, paid: paidText }); onConfirmed?.(); }
       else await declineOrder(pending);
     } finally { busy.current = false; setPending(null); }
   };
@@ -55,13 +57,18 @@ export default function OrderCheck({ onConfirmed }) {
             {p.platform.name} · {money(p.paid)}
             {p.wasCheapest && p.platformsCompared >= 2 ? <Text> · en iyi <Text style={s.gold}>Pryce</Text> ile</Text> : null}
           </Text>
-          {p.saved > 0 ? <Text style={s.saved}>Diğer platformların ortalamasına göre {money(p.saved)} daha az</Text> : null}
+          <Text style={s.checkText}>Tasarruf, onayladığın tutarla diğer platformların karşılaştırılan fiyatlarına göre hesaplanır.</Text>
 
+          <Text style={[s.checkText, { marginTop: 14 }]}>Ödediğin tutar (₺)</Text>
+          <TextInput value={paidText} onChangeText={(v) => { setPaidText(v); setPaidEdited(true); }}
+            keyboardType="decimal-pad" accessibilityLabel="Ödediğin tutar" maxLength={9}
+            style={{ borderWidth: 1, borderColor: T.faint, borderRadius: 10, padding: 10, marginTop: 6 }} />
+          {matched === false && !paidEdited ? <Text style={s.checkText}>Lütfen gerçekten ödediğin tutarı gir.</Text> : null}
           <View style={s.buttons}>
             <Pressable style={[s.btn, s.no]} onPress={() => answer(false)} accessibilityRole="button">
               <Text style={s.noText}>Hayır</Text>
             </Pressable>
-            <Pressable style={[s.btn, s.yes]} onPress={() => answer(true)} accessibilityRole="button">
+            <Pressable disabled={parsePaid(paidText) === null || (matched === false && !paidEdited)} style={[s.btn, s.yes]} onPress={() => answer(true)} accessibilityRole="button">
               <Text style={s.yesText}>Evet</Text>
             </Pressable>
           </View>

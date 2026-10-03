@@ -12,6 +12,7 @@ import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { foodIconFor } from '../../lib/foodIcon';
 import { randomId, compareContext } from '../../lib/telemetry';
+import { basketProblem } from '../../lib/options';
 import { compareBasket } from '../../api/client';
 import { useCompare } from '../CompareScreen';
 
@@ -32,6 +33,8 @@ export default function BasketScreen({ navigation }) {
 
   const compare = useCallback(async () => {
     if (!lines.length || !restaurant) return;
+    const issue = basketProblem(lines);
+    if (issue) { setError(issue); return; }
     setComparing(true);
     setError(null);
     try {

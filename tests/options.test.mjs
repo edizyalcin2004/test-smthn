@@ -27,3 +27,10 @@ test('problems and summary', () => {
   assert.equal(problem(groups, [10, 20, 30]), null);
   assert.equal(summary(groups, [10, 20, 30]), 'Tavuk, Mayonez, Kola');
 });
+
+const { basketProblem } = await import('../src/lib/options.js');
+test('unverified options and duplicate configurations cannot silently use base prices', () => {
+  assert.ok(basketProblem([{ item:{name:'Burger'}, options:{unavailable:true} }]));
+  assert.ok(basketProblem([{ item:{name:'Burger'}, options:{platform_id:1} }, { item:{name:'burger'}, options:{platform_id:1} }]));
+  assert.equal(basketProblem([{ item:{name:'Burger'}, qty:2, options:{platform_id:1,choices:[1]} }]), null);
+});

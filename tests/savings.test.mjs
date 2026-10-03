@@ -45,3 +45,16 @@ test('items line', () => {
   assert.equal(itemsLine([{ name: 'Big Mac', qty: 2 }, { name: 'Patates', qty: 1 }, { name: 'Kola', qty: 1 }]),
     '2× Big Mac, Patates +1');
 });
+
+const { confirmedAmounts, parsePaid } = await import('../src/lib/savings.js');
+test('confirmed savings use actual payment and cannot preserve savings on a price mismatch', () => {
+  const comparable = [P(1,240,200), P(2,260), P(3,300)];
+  const p = buildPending({ restaurant:{}, basket, chosen:comparable[0], comparable, now });
+  const expensive = confirmedAmounts(p, '320,00', false);
+  assert.equal(expensive.paid,320); assert.equal(expensive.saved,0); assert.equal(expensive.codeSaved,0);
+  assert.equal(expensive.wasCheapest,false); assert.equal(expensive.quotedTotal,200);
+  const verified = confirmedAmounts(p,'210',true);
+  assert.equal(verified.saved,70); assert.equal(verified.codeSaved,30);
+  for (const input of ['', '0', '-5', 'Infinity', '1,234.00', '100001']) assert.equal(parsePaid(input), null);
+  assert.throws(() => confirmedAmounts(p,'',false));
+});

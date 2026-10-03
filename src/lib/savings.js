@@ -28,6 +28,7 @@ export function buildPending({ restaurant, basket, chosen, comparable, now, comp
     listTotal: num(chosen.total),
     codeSaved: Math.max(0, num(chosen.total) - paid),
     othersAvg,
+    othersMin: others.length ? Math.min(...others) : null,
     platformsCompared: comparable.length,
     wasCheapest: totals.length > 0 && paid <= Math.min(...totals),
     saved: counted ? Math.max(0, Math.round((othersAvg - paid) * 100) / 100) : 0,
@@ -77,4 +78,21 @@ export function summarize(orders, now) {
     sources: { price: total - codeSaved, code: codeSaved },
     recent: orders.slice().sort((a, b) => b.at - a.at).slice(0, 6),
   };
+}
+
+// Confirm the amount the user actually paid, rather than storing the quote as fact.
+export function parsePaid(value) {
+  const text = String(value).trim();
+  if (!/^\d+(?:[.,]\d{1,2})?$/.test(text)) return null;
+  const paid = Number(text.replace(',', '.'));
+  return paid > 0 && paid <= 100000 ? paid : null;
+}
+
+export function confirmedAmounts(pending, amount, matched) {
+  const paid = parsePaid(amount);
+  if (paid === null) throw new Error('Enter the paid amount');
+  const saved = pending.platformsCompared >= 2 ? Math.max(0, Math.round((pending.othersAvg - paid) * 100) / 100) : 0;
+  return { ...pending, quotedTotal: pending.paid, paid, saved,
+    codeSaved: matched === false ? 0 : Math.min(pending.codeSaved, Math.max(0, pending.listTotal - paid)),
+    wasCheapest: pending.othersMin != null && paid <= pending.othersMin };
 }

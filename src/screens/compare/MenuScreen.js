@@ -2,11 +2,11 @@
 // in Compare-level state. Continuous scroll with one section per REAL backend
 // category; the category chips scroll-spy the list (tap → jump to section).
 // The bottom bar goes to the Basket review screen — comparing happens there.
-// No item customization: the backend prices flat items, so tapping + adds one
-// unit; quantities are adjusted on the Basket screen. No invented options.
+// Verified option trees configure the first item; subsequent additions reuse
+// that configuration. Unknown option data never falls back to a base-price comparison.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet,
+  View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
@@ -55,8 +55,8 @@ export default function MenuScreen({ route, navigation }) {
     if (!mounted.current) return;
     setBusyId(null);
     if (tree.status === 'configurable' && tree.groups?.length) setSheet({ item: it, tree });
-    else setQty(it, 1, tree.status === 'options_unavailable'
-      ? { unavailable: true, summary: 'Seçenek verisi güncel değil — seçeneksiz fiyat' } : null);
+    else if (tree.status === 'no_options') setQty(it, 1, null);
+    else Alert.alert('Seçenekler doğrulanamıyor', 'Bu ürünün güncel seçenekleri doğrulanamadığı için toplam fiyatını karşılaştıramıyoruz. Lütfen başka bir ürün seç veya daha sonra tekrar dene.');
   }, [setQty]);
 
   const load = useCallback(async () => {

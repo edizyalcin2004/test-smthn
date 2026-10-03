@@ -24,6 +24,7 @@ import AccountScreen from './src/screens/AccountScreen';
 import ProScreen     from './src/screens/ProScreen';
 import TabBar        from './src/navigation/TabBar';
 import { CodeSheetProvider } from './src/components/CodeSheet';
+import OrderCheck from './src/components/OrderCheck';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -78,6 +79,7 @@ export default function App() {
             <Tab.Screen name="Deals"   component={DealsScreen} />
             <Tab.Screen name="Account" component={AccountStackScreen} />
           </Tab.Navigator>
+          <OrderCheck />
         </CodeSheetProvider>
       </NavigationContainer>
       <StatusBar style="dark" />

@@ -2,11 +2,11 @@
 // in Compare-level state. Continuous scroll with one section per REAL backend
 // category; the category chips scroll-spy the list (tap → jump to section).
 // The bottom bar goes to the Basket review screen — comparing happens there.
-// No item customization: the backend prices flat items, so tapping + adds one
-// unit; quantities are adjusted on the Basket screen. No invented options.
+// Verified option trees configure the first item; subsequent additions reuse
+// that configuration. Unknown option data never falls back to a base-price comparison.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet,
+  View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
@@ -14,7 +14,8 @@ import { RoundBtn } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { foodIconFor } from '../../lib/foodIcon';
-import { getMenu } from '../../api/client';
+import { getMenu, getItemOptions } from '../../api/client';
+import OptionSheet from '../../components/OptionSheet';
 import { useCompare } from '../CompareScreen';
 
 const SPY_OFFSET = 70; // px below the chips where a section counts as "current"
@@ -39,6 +40,24 @@ export default function MenuScreen({ route, navigation }) {
   const [fav, setFav]         = useState(false);
   const mounted               = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
+
+  // T-028: first add of an item with options opens the option sheet.
+  const [sheet, setSheet]     = useState(null);   // {item, tree}
+  const [busyId, setBusyId]   = useState(null);
+  const optionCache           = useRef({});
+  const addItem = useCallback(async (it, qty) => {
+    if (qty > 0) { setQty(it, qty + 1); return; }         // same configuration again
+    setBusyId(it.id);
+    let tree = optionCache.current[it.id];
+    try {
+      if (!tree) tree = optionCache.current[it.id] = await getItemOptions(it.id);
+    } catch { tree = { status: 'options_unavailable' }; }
+    if (!mounted.current) return;
+    setBusyId(null);
+    if (tree.status === 'configurable' && tree.groups?.length) setSheet({ item: it, tree });
+    else if (tree.status === 'no_options') setQty(it, 1, null);
+    else Alert.alert('Seçenekler doğrulanamıyor', 'Bu ürünün güncel seçenekleri doğrulanamadığı için toplam fiyatını karşılaştıramıyoruz. Lütfen başka bir ürün seç veya daha sonra tekrar dene.');
+  }, [setQty]);
 
   const load = useCallback(async () => {
     if (!restaurant) return;
@@ -163,7 +182,8 @@ export default function MenuScreen({ route, navigation }) {
                 return (
                   <Pressable
                     key={String(it.id)}
-                    onPress={() => setQty(it, qty + 1)}
+                    onPress={() => addItem(it, qty)}
+                    disabled={busyId === it.id}
                     style={({ pressed }) => [s.itemCard, active && s.itemCardActive, pressed && s.itemPressed]}
                   >
                     <View style={s.thumb}>
@@ -186,6 +206,11 @@ export default function MenuScreen({ route, navigation }) {
       )}
 
       {error && !loading && items.length > 0 ? <Text style={s.errBanner}>{error}</Text> : null}
+
+      {sheet ? (
+        <OptionSheet item={sheet.item} tree={sheet.tree} onClose={() => setSheet(null)}
+          onSave={(opts) => { setQty(sheet.item, 1, opts); setSheet(null); }} />
+      ) : null}
 
       {/* bottom basket bar → review */}
       {count > 0 && !loading ? (

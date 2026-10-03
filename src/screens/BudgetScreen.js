@@ -1,49 +1,39 @@
-// BudgetScreen — "Tasarruf" / how much you saved with Pryce.
-// Presentation only (mock copy, same class as the previous Bütçe build):
-// no savings tracking exists backend-side yet, so every number here is
-// display copy — flagged, never presented as live data elsewhere.
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+// BudgetScreen — "Tasarruf": what the user saved with Pryce (D-030).
+// Every number comes from orders the user CONFIRMED in the return popup
+// (OrderCheck), stored on this phone only. Saved = average of the other
+// complete platforms minus what they paid (D-031); nothing is invented.
+import { useState, useCallback } from 'react';
+import { View, Text, Image, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { T, font, money } from '../theme/tokens';
-import { Screen, Card, Header, Pill, SectionHead } from '../components/ui';
+import { Screen, Card, Header, SectionHead } from '../components/ui';
 import { Icon, Spark } from '../components/icons';
 import Food from '../components/Food';
 import { restaurantTile } from '../lib/brand';
+import { loadOrders } from '../lib/orders';
+import { summarize, itemsLine } from '../lib/savings';
 
 const mascot = require('../../assets/mascot.png');
-
-// mock display copy
-const SAVINGS = {
-  month: 'Haziran',
-  thisMonth: 200,
-  total: 1340,
-  cheapestRate: 100,
-  avgPerOrder: 11,
-  trend: [
-    { m: 'Oca', v: 95 }, { m: 'Şub', v: 130 }, { m: 'Mar', v: 110 },
-    { m: 'Nis', v: 165 }, { m: 'May', v: 175 }, { m: 'Haz', v: 200 },
-  ],
-  sources: [
-    { id: 'compare',  label: 'Fiyat karşılaştırma', amt: 92, color: '#3D5AF1' },
-    { id: 'codes',    label: 'İndirim kodları',     amt: 78, color: '#F5A524' },
-    { id: 'delivery', label: 'Teslimat ücreti',     amt: 30, color: '#2BAE66' },
-  ],
-  recent: [
-    { id: 'r1', name: 'Big Mac Menü',          restaurant: "McDonald's",   saved: 35, vs: 'en pahalı platform', date: '18 Haz' },
-    { id: 'r2', name: 'Whopper® Menü',         restaurant: 'Burger King',  saved: 28, vs: 'YEMEKSEPETI50 kodu', date: '15 Haz' },
-    { id: 'r3', name: 'Chicken Sandwich Menü', restaurant: 'Popeyes',      saved: 22, vs: 'ücretsiz teslimat',  date: '12 Haz' },
-    { id: 'r4', name: "Domino's Orta Pizza",   restaurant: "Domino's Pizza", saved: 19, vs: 'en pahalı platform', date: '9 Haz' },
-  ],
-};
+const SRC = [
+  { id: 'price', label: 'Platformlar arası fiyat farkı', color: '#3D5AF1' },
+  { id: 'code',  label: 'Otomatik uygulanan kodlar',     color: '#F5A524' },
+];
+const dateTR = (t) => new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
 
 // trend line geometry (viewBox units)
 const W = 300, H = 96;
 
 export default function BudgetScreen({ navigation }) {
-  const sv = SAVINGS;
-  const maxV = Math.max(...sv.trend.map((t) => t.v));
-  const sourceTotal = sv.sources.reduce((a, b) => a + b.amt, 0);
+  const [orders, setOrders] = useState(null);
+  useFocusEffect(useCallback(() => { loadOrders().then(setOrders); }, []));
+  if (orders === null) return <Screen><Header title="Tasarruf" /></Screen>;
+  const sv = summarize(orders, Date.now());
+  if (!sv.count) return <EmptyBudget navigation={navigation} />;
+  const maxV = Math.max(1, ...sv.trend.map((t) => t.v));
+  const sources = SRC.map((x) => ({ ...x, amt: sv.sources[x.id] })).filter((x) => x.amt > 0);
+  const sourceTotal = sources.reduce((a, b) => a + b.amt, 0);
   const n = sv.trend.length;
   const pts = sv.trend.map((t, i) => [(i / (n - 1)) * W, H - (t.v / maxV) * (H - 14) - 6]);
   const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
@@ -67,12 +57,12 @@ export default function BudgetScreen({ navigation }) {
             </View>
             <View style={s.heroAmountRow}>
               <Text style={s.heroTL}>₺</Text>
-              <Text style={s.heroAmount}>{sv.thisMonth}</Text>
+              <Text style={s.heroAmount}>{Number(sv.thisMonth).toLocaleString('tr-TR')}</Text>
             </View>
-            <Text style={s.heroSub}>tasarruf ettin 🎉</Text>
+            <Text style={s.heroSub}>diğer platformların ortalamasına göre daha az ödedin</Text>
             <View style={s.heroBadge}>
               <Icon name="check" s={13} c="#5FE0A0" sw={3} />
-              <Text style={s.heroBadgeText}>Her siparişte en ucuzu bulduk</Text>
+              <Text style={s.heroBadgeText}>{sv.count} onaylı sipariş</Text>
             </View>
           </View>
         </LinearGradient>
@@ -82,7 +72,7 @@ export default function BudgetScreen({ navigation }) {
       <View style={s.tileRow}>
         {[
           { n: money(sv.total),       label: 'Toplam\ntasarruf', c: T.green },
-          { n: '%' + sv.cheapestRate, label: 'En ucuzu\nbulma',  c: T.blue },
+          { n: sv.cheapestRate == null ? '—' : '%' + sv.cheapestRate, label: 'En ucuzdan\nsipariş', c: T.blue },
           { n: money(sv.avgPerOrder), label: 'Sipariş\nbaşına',  c: T.gold },
         ].map((t, i) => (
           <Card key={String(i)} pad={13} style={s.tile}>
@@ -97,10 +87,6 @@ export default function BudgetScreen({ navigation }) {
         <Card>
           <View style={s.trendHead}>
             <Text style={s.cardTitle}>Tasarruf trendi</Text>
-            <Pill bg={T.greenSoft} fg={T.green} textStyle={s.trendPillText}>
-              <Icon name="spark" s={11} c={T.green} sw={0} />
-              <Text style={[s.trendPillText, { color: T.green }]}>Yükselişte</Text>
-            </Pill>
           </View>
           <Text style={s.cardSub}>Son 6 ay · aylık tasarruf</Text>
           <View>
@@ -136,17 +122,17 @@ export default function BudgetScreen({ navigation }) {
       </View>
 
       {/* where savings came from */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
+      {sourceTotal > 0 ? <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
         <Card>
           <Text style={s.cardTitle}>Tasarruf nereden geldi?</Text>
-          <Text style={s.cardSub}>Bu ay · {money(sv.thisMonth)}</Text>
+          <Text style={s.cardSub}>Tüm siparişler · {money(sv.total)}</Text>
           <View style={s.stackBar}>
-            {sv.sources.map((src) => (
+            {sources.map((src) => (
               <View key={src.id} style={{ flex: src.amt / sourceTotal, backgroundColor: src.color, borderRadius: 4 }} />
             ))}
           </View>
           <View style={{ marginTop: 14, gap: 11 }}>
-            {sv.sources.map((src) => (
+            {sources.map((src) => (
               <View key={src.id} style={s.srcRow}>
                 <View style={[s.srcDot, { backgroundColor: src.color }]} />
                 <Text style={s.srcLabel}>{src.label}</Text>
@@ -155,20 +141,20 @@ export default function BudgetScreen({ navigation }) {
             ))}
           </View>
         </Card>
-      </View>
+      </View> : null}
 
       {/* recent savings */}
       <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
         <SectionHead title="Son tasarruflar" />
         <Card pad={0}>
           {sv.recent.map((r, i) => {
-            const tile = restaurantTile({ name: r.restaurant });
+            const tile = restaurantTile({ name: r.restaurant.name });
             return (
               <View key={r.id} style={[s.recentRow, i ? s.recentBorder : null]}>
                 <View style={[s.recentTile, { backgroundColor: tile.bg }]}><Food name={tile.food} s={26} /></View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.recentName} numberOfLines={1}>{r.name}</Text>
-                  <Text style={s.recentSub} numberOfLines={1}>{r.vs} · {r.date}</Text>
+                  <Text style={s.recentName} numberOfLines={1}>{itemsLine(r.items)}</Text>
+                  <Text style={s.recentSub} numberOfLines={1}>{r.restaurant.name} · {r.platform.name} · {dateTR(r.at)}</Text>
                 </View>
                 <View style={s.recentSaved}>
                   <Icon name="minus" s={13} c={T.green} sw={3} />
@@ -187,6 +173,33 @@ export default function BudgetScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={s.ctaTitle}>Tasarrufa devam et</Text>
             <Text style={s.ctaSub}>Yeni bir sipariş karşılaştır</Text>
+          </View>
+          <Icon name="chevR" s={19} c={T.blue} sw={2.2} />
+        </Card>
+      </View>
+    </Screen>
+  );
+}
+
+function EmptyBudget({ navigation }) {
+  return (
+    <Screen>
+      <Header title="Tasarruf" />
+      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
+        <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
+          <Image source={mascot} style={{ width: 96, height: 96 }} resizeMode="contain" />
+          <Text style={[s.cardTitle, { marginTop: 10 }]}>Henüz onaylı sipariş yok</Text>
+          <Text style={[s.cardSub, { textAlign: 'center', marginBottom: 0 }]}>
+            Karşılaştır, platformu aç, siparişini ver. Döndüğünde onaylarsan tasarrufun burada görünür.
+          </Text>
+        </Card>
+      </View>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+        <Card onPress={() => navigation.navigate('Compare')} style={s.cta}>
+          <View style={s.ctaIcon}><Icon name="search" s={22} c={T.blue} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.ctaTitle}>İlk karşılaştırmanı yap</Text>
+            <Text style={s.ctaSub}>Sepetini oluştur, en ucuz platformu gör</Text>
           </View>
           <Icon name="chevR" s={19} c={T.blue} sw={2.2} />
         </Card>

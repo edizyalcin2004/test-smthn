@@ -11,12 +11,14 @@ import { Card, RoundBtn } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { foodIconFor } from '../../lib/foodIcon';
+import { randomId, compareContext } from '../../lib/telemetry';
+import { basketProblem } from '../../lib/options';
 import { compareBasket } from '../../api/client';
 import { useCompare } from '../CompareScreen';
 
 export default function BasketScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { restaurant, basket, setQty, setResults } = useCompare();
+  const { restaurant, basket, setQty, setResults, setCompareId } = useCompare();
   const [comparing, setComparing] = useState(false);
   const [error, setError]         = useState(null);
   const mounted                   = useRef(true);
@@ -31,23 +33,31 @@ export default function BasketScreen({ navigation }) {
 
   const compare = useCallback(async () => {
     if (!lines.length || !restaurant) return;
+    const issue = basketProblem(lines);
+    if (issue) { setError(issue); return; }
     setComparing(true);
     setError(null);
     try {
       // Response is already ranked by effective total ascending.
+      const compareId = randomId();
       const ranked = await compareBasket(
         restaurant.id,
-        lines.map(({ item, qty }) => ({ id: item.id, name: item.name, qty })),
+        lines.map(({ item, qty, options }) => ({
+          id: item.id, name: item.name, qty,
+          ...(options?.platform_id ? { options: { platform_id: options.platform_id, choices: options.choices } } : {}),
+        })),
+        { compare_id: compareId, client: await compareContext() },
       );
       if (!mounted.current) return;
       setResults(ranked);
+      setCompareId(compareId);
       navigation.navigate('Results');
     } catch {
       if (mounted.current) setError('Karşılaştırma başarısız. Bağlantını kontrol edip tekrar dene.');
     } finally {
       if (mounted.current) setComparing(false);
     }
-  }, [lines, restaurant, navigation, setResults]);
+  }, [lines, restaurant, navigation, setResults, setCompareId]);
 
   return (
     <View style={s.root}>
@@ -74,7 +84,7 @@ export default function BasketScreen({ navigation }) {
           </View>
         ) : (
           <View style={{ gap: 12 }}>
-            {lines.map(({ item, qty }) => (
+            {lines.map(({ item, qty, options }) => (
               <Card key={String(item.id)} pad={0} style={s.lineCard}>
                 <View style={s.lineBody}>
                   <View style={s.thumb}>
@@ -91,6 +101,7 @@ export default function BasketScreen({ navigation }) {
                     <Text style={s.lineSub} numberOfLines={1}>
                       {qty > 1 ? `${qty} × ${money(item.price)}` : (item.category || '')}
                     </Text>
+                    {options?.summary ? <Text style={s.lineSub} numberOfLines={2}>{options.summary}</Text> : null}
                   </View>
                 </View>
                 {/* actions */}

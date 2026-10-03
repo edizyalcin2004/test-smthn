@@ -69,11 +69,26 @@ export function getMenu(restaurantId) {
 // total — callers must surface it as unavailable, never as a number.
 // best_code is null unless EVERY condition is verifiably met backend-side;
 // callers must never invent or estimate a discount themselves.
-export function compareBasket(restaurantId, items) {
+// meta (T-027, optional): { compare_id, client } — a random per-comparison id
+// and on-device flags; never a user or device identifier.
+export function compareBasket(restaurantId, items, meta = {}) {
   return request('/compare-basket', {
     method: 'POST',
-    body: { restaurant_id: restaurantId, items },
+    body: { restaurant_id: restaurantId, items, ...meta },
   });
+}
+
+// T-028: the option tree to configure an item on.
+// {menu_item_id, status: configurable|no_options|options_unavailable,
+//  reference_platform: {id, name}, fresh_platforms: [..],
+//  groups: [{id, name, min, max, parent_option_id, options: [{id, name}]}]}
+export function getItemOptions(itemId) {
+  return request(`/menu-items/${itemId}/options`);
+}
+
+// T-027: anonymous usage events, strict server-side schemas.
+export function postEvents(body) {
+  return request('/events', { method: 'POST', body });
 }
 
 // GET /menu-items — all items with nested restaurant + per-platform prices:
@@ -110,4 +125,10 @@ export function getDiscountCodes(restaurantId) {
 // returned — no fabricated photos/ratings/savings.
 export function getSpecialDeals() {
   return request('/special-deals');
+}
+
+// D-030: anonymous "did you order / did prices match" answer. Fire-and-forget:
+// a failure here must never bother the user.
+export function postOrderFeedback(body) {
+  return request('/order-feedback', { method: 'POST', body });
 }

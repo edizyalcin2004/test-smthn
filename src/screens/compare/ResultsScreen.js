@@ -12,7 +12,7 @@
 // Incomplete platforms are shown separately, never ranked, never badged, and
 // never with a headline price (a truncated total must not read as "cheapest").
 // No delivery/ETA is shown — the backend returns none, so we invent none.
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
 import { RoundBtn, Brand, Pill } from '../../components/ui';
@@ -20,11 +20,22 @@ import { Icon } from '../../components/icons';
 import { platformBrand } from '../../lib/brand';
 import { useCompare } from '../CompareScreen';
 import { useCodeSheet } from '../../components/CodeSheet';
+import { buildPending } from '../../lib/savings';
+import { savePending, clearPending } from '../../lib/orders';
+import { safeOrderURL } from '../../lib/orderLinks';
+import { track } from '../../lib/telemetry';
 
 const num = (v) => Number(v ?? 0);
 const hasCode = (p) => p.total_after_code != null && p.best_code != null;
 const effective = (p) => num(hasCode(p) ? p.total_after_code : p.total);
 const allFound = (p) => (p.items ?? []).length > 0 && p.items.every((it) => it.found);
+
+// T-028: why an item could not be priced with the chosen options on a platform.
+const lineText = (it) => it.found && it.price != null
+  ? `${it.name}: ${money(it.price)}`
+  : it.options_status && it.options_status !== 'priced'
+    ? `${it.name}: bu seçeneklerle karşılaştırılamıyor`
+    : `${it.name}: bu platformda bulunamadı`;
 
 function usageCaveat(u) {
   if (u === 'once_per_user') return 'Kullanıcı başına 1 kez';
@@ -34,7 +45,7 @@ function usageCaveat(u) {
 
 export default function ResultsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { restaurant, results, basket } = useCompare();
+  const { restaurant, results, basket, compareId } = useCompare();
   const { openCode } = useCodeSheet();
 
   const rows = results ?? [];
@@ -50,6 +61,27 @@ export default function ResultsScreen({ navigation }) {
   const openRowCode = (p) =>
     openCode({ ...p.best_code, platform: p.platform, restaurant_id: restaurant?.id });
 
+  // D-030: remember what they are about to order, then hand off to the
+  // platform. The return popup (OrderCheck) asks whether they finished.
+  const orderOn = async (p) => {
+    const url = safeOrderURL(p.order_url);
+    if (!url) return;
+    await savePending(buildPending({ restaurant, basket, chosen: p, comparable, now: Date.now(), compareId }));
+    if (compareId) {
+      const rank = comparable.findIndex((x) => x.platform.id === p.platform.id) + 1;
+      const cheapest = comparable.length ? effective(comparable[0]) : effective(p);
+      track({ event_name: 'handoff', compare_id: compareId, restaurant_id: restaurant.id,
+              platform_id: p.platform.id, rank: rank || null, was_cheapest: effective(p) <= cheapest,
+              gap_tl: String(Math.max(0, Math.round((effective(p) - cheapest) * 100) / 100)),
+              link_kind: p.order_link_kind ?? null });
+    }
+    try { await Linking.openURL(url); }
+    catch {
+      await clearPending();
+      Alert.alert('Bağlantı açılamadı', 'Lütfen platformu kendi uygulamasından aç.');
+    }
+  };
+
   return (
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 4 }]}>
@@ -61,9 +93,15 @@ export default function ResultsScreen({ navigation }) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        {Object.values(basket).some((l) => l.options?.unavailable) ? (
+          <Text style={s.note}>
+            {Object.values(basket).filter((l) => l.options?.unavailable).map((l) => l.item.name).join(', ')}:
+            güncel seçenek verisi yok, seçeneksiz (temel) fiyatla karşılaştırıldı — seçtiğin ekler fiyatı değiştirebilir.
+          </Text>
+        ) : null}
         {isSingle ? (
           <Text style={s.note}>
-            Bu restoran tek platformda satılıyor — karşılaştırılacak başka fiyat yok.
+            Bu sepet için yalnızca bir platformda doğrulanmış fiyat var.
           </Text>
         ) : null}
 
@@ -72,9 +110,10 @@ export default function ResultsScreen({ navigation }) {
           <PlatformCard
             key={String(p.platform.id)}
             p={p}
-            rank={isMulti ? i + 1 : null}
-            winner={isMulti && i === 0}
+            rank={isMulti ? 1 + comparable.filter((x) => effective(x) < effective(p)).length : null}
+            winner={isMulti && effective(p) === effective(comparable[0])}
             onCode={() => openRowCode(p)}
+            onOrder={safeOrderURL(p.order_url) ? () => orderOn(p) : null}
           />
         ))}
 
@@ -95,19 +134,12 @@ export default function ResultsScreen({ navigation }) {
           </View>
         ) : null}
 
-        {/* Filtrele & Sırala (design element; sort/filter not yet wired) */}
-        {rows.length > 0 ? (
-          <Pressable style={s.filterBtn} onPress={() => {}}>
-            <Icon name="filter" s={18} c="#fff" />
-            <Text style={s.filterText}>Filtrele &amp; Sırala</Text>
-          </Pressable>
-        ) : null}
       </ScrollView>
     </View>
   );
 }
 
-function PlatformCard({ p, rank, winner, onCode }) {
+function PlatformCard({ p, rank, winner, onCode, onOrder }) {
   const brand   = platformBrand(p.platform);
   const coded   = hasCode(p);
   const codeOff = coded ? num(p.total) - num(p.total_after_code) : 0;
@@ -149,12 +181,22 @@ function PlatformCard({ p, rank, winner, onCode }) {
       <View style={s.lines}>
         {(p.items ?? []).map((it, j) => (
           <Text key={String(j)} style={s.line}>
-            {it.found && it.price != null
-              ? `${it.name}: ${money(it.price)}`
-              : `${it.name}: bu platformda bulunamadı`}
+            {lineText(it)}
           </Text>
         ))}
       </View>
+
+      {onOrder ? (
+        <>
+          <Pressable style={[s.orderBtn, winner && s.orderBtnWin]} onPress={onOrder} accessibilityRole="link">
+            <Text style={[s.orderText, winner && s.orderTextWin]}>
+              {p.order_link_kind === 'restaurant' ? 'Restoranı aç' : 'Platformu aç'} · {p.platform.name}
+            </Text>
+            <Icon name="chevR" s={14} c={winner ? T.navy : T.ink} sw={2.4} />
+          </Pressable>
+          <Text style={s.orderNote}>Sepet aktarılmaz — ürünleri platformda seç; teslimat ücreti hariç.</Text>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -162,6 +204,7 @@ function PlatformCard({ p, rank, winner, onCode }) {
 function IncompleteCard({ p }) {
   const brand   = platformBrand(p.platform);
   const missing = (p.items ?? []).filter((it) => !it.found).length;
+  const optMissing = (p.items ?? []).filter((it) => !it.found && it.options_status && it.options_status !== 'priced').length;
   return (
     <View style={s.incCard}>
       <View style={s.incTop}>
@@ -170,17 +213,23 @@ function IncompleteCard({ p }) {
       </View>
       {(p.items ?? []).map((it, j) => (
         <Text key={String(j)} style={s.line}>
-          {it.found && it.price != null
-            ? `${it.name}: ${money(it.price)}`
-            : `${it.name}: bu platformda bulunamadı`}
+          {lineText(it)}
         </Text>
       ))}
-      <Text style={s.incCaveat}>{missing} ürün bulunamadı — toplam karşılaştırmaya dahil edilmedi</Text>
+      <Text style={s.incCaveat}>
+        {optMissing ? `${optMissing} ürün bu seçeneklerle karşılaştırılamıyor` : `${missing} ürün bulunamadı`} — toplam karşılaştırmaya dahil edilmedi
+      </Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  orderBtn:     { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  borderRadius: 12, paddingVertical: 11, backgroundColor: T.bg },
+  orderBtnWin:  { backgroundColor: T.gold },
+  orderText:    { fontSize: 14, fontFamily: font.extrabold, color: T.ink },
+  orderTextWin: { color: T.navy },
+  orderNote:    { fontSize: 11, fontFamily: font.semibold, color: T.faint, marginTop: 6, textAlign: 'center' },
   root:    { flex: 1, backgroundColor: T.bg },
   header:  { paddingHorizontal: 18, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
   title:   { fontSize: 21, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.4 },

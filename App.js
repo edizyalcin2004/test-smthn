@@ -21,7 +21,7 @@ import CompareScreen from './src/screens/CompareScreen';
 import BudgetScreen  from './src/screens/BudgetScreen';
 import DealsScreen   from './src/screens/DealsScreen';
 import AccountScreen from './src/screens/AccountScreen';
-import ProScreen     from './src/screens/ProScreen';
+import PrivacyScreen from './src/screens/PrivacyScreen';
 import TabBar        from './src/navigation/TabBar';
 import { CodeSheetProvider } from './src/components/CodeSheet';
 import OrderCheck from './src/components/OrderCheck';
@@ -32,12 +32,12 @@ const Tab = createBottomTabNavigator();
 const AccountStack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
 
-// Account tab hosts a stack so Pryce Pro can be pushed from Account.
+// Account tab hosts a stack so the privacy notice can be pushed from Account.
 function AccountStackScreen() {
   return (
     <AccountStack.Navigator screenOptions={{ headerShown: false }}>
       <AccountStack.Screen name="AccountHome" component={AccountScreen} />
-      <AccountStack.Screen name="Pro" component={ProScreen} />
+      <AccountStack.Screen name="Privacy" component={PrivacyScreen} />
     </AccountStack.Navigator>
   );
 }

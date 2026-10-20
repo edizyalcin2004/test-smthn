@@ -1,14 +1,14 @@
 // DealsScreen — "Fırsatlar" with a segmented toggle [ Kodlar | Özel Menüler ].
 //   Kodlar       — live discount codes (soonest-expiry first), each opens the
 //                  shared CodeSheet. Unchanged behaviour.
-//   Özel Menüler — platform-EXCLUSIVE special-menu bundles from /special-deals,
-//                  grouped by restaurant. Single platform, single price, honest:
-//                  NO winner badge, NO savings, NO strikethrough, NO ratings.
+//   Özel Menüler — special-menu deals from /special-deals, grouped by restaurant.
+//                  Compare only backend-matched prices on other platforms.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, Image, ActivityIndicator, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { T, font, money } from '../theme/tokens';
+import { compareElsewhere } from '../lib/deals';
 import { Card, Header, Pill, Brand } from '../components/ui';
 import { Icon } from '../components/icons';
 import Food from '../components/Food';
@@ -33,6 +33,7 @@ const SM_PLATFORMS = [
   { id: 'all',         label: 'Tümü' },
   { id: 'yemeksepeti', label: 'Yemeksepeti' },
   { id: 'trendyol',    label: 'Trendyol' },
+  { id: 'getir',       label: 'Getir' },
   { id: 'migros',      label: 'Migros' },
   { id: 'tiklagelsin', label: 'Tıklagelsin' },
 ];
@@ -175,7 +176,7 @@ function CodesView({ codes, openCode }) {
   );
 }
 
-// ── ÖZEL MENÜLER segment — platform-exclusive bundles, grouped by restaurant ──
+// ── ÖZEL MENÜLER segment — special-menu deals, grouped by restaurant ──
 function SpecialMenusView({ groups }) {
   const navigation = useNavigation();
   const [q, setQ] = useState('');
@@ -334,7 +335,7 @@ function BundleCard({ bundle, food }) {
   return (
     <Card pad={0} style={s.bundleCard}>
       <View style={s.bundleBody}>
-        {/* platform badge + plain price (no comparison, no savings) */}
+        {/* platform badge + current price */}
         <View style={s.bundleTop}>
           <PlatformBadge platform={bundle.platform} />
           <Text style={s.bundlePrice}>{money(bundle.price)}</Text>
@@ -352,10 +353,10 @@ function BundleCard({ bundle, food }) {
           </Pressable>
         </View>
       </View>
-      {/* exclusivity footer */}
+      {/* Source platform, without claiming exclusivity for matched menus. */}
       <View style={s.bundleFooter}>
         <View style={[s.checkDot, { backgroundColor: b.bg }]}><Icon name="check" s={11} c="#fff" sw={3.2} /></View>
-        <Text style={s.footerText}>Yalnızca <Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text>'de</Text>
+        <Text style={s.footerText}><Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text> fırsatı</Text>
       </View>
     </Card>
   );
@@ -364,11 +365,8 @@ function BundleCard({ bundle, food }) {
 // The same product on other platforms (backend `elsewhere`, founder-reviewed
 // matching, fresh prices only). Shown only when it exists — never invented.
 function Elsewhere({ bundle }) {
-  const rows = bundle.elsewhere || [];
+  const { rows, diff } = compareElsewhere(bundle);
   if (!rows.length) return null;
-  const here = Number(bundle.price);
-  const best = Math.min(...rows.map((r) => Number(r.price)));
-  const diff = Math.round(best - here);
   return (
     <View style={s.elseBox}>
       <Text style={s.elseTitle}>Aynı menü diğer platformlarda</Text>
@@ -380,9 +378,9 @@ function Elsewhere({ bundle }) {
         ))}
       </View>
       {diff > 0 ? (
-        <Text style={s.elseGood}>Burada ₺{diff} daha ucuz</Text>
+        <Text style={s.elseGood}>Burada {money(diff)} daha ucuz</Text>
       ) : diff < 0 ? (
-        <Text style={s.elseBad}>Başka platformda ₺{-diff} daha ucuz</Text>
+        <Text style={s.elseBad}>Başka platformda {money(-diff)} daha ucuz</Text>
       ) : (
         <Text style={s.elseSame}>Fiyat aynı</Text>
       )}

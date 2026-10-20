@@ -1,14 +1,14 @@
 // DealsScreen — "Fırsatlar" with a segmented toggle [ Kodlar | Özel Menüler ].
 //   Kodlar       — live discount codes (soonest-expiry first), each opens the
 //                  shared CodeSheet. Unchanged behaviour.
-//   Özel Menüler — platform-EXCLUSIVE special-menu bundles from /special-deals,
-//                  grouped by restaurant. Single platform, single price, honest:
-//                  NO winner badge, NO savings, NO strikethrough, NO ratings.
+//   Özel Menüler — special-menu deals from /special-deals, grouped by restaurant.
+//                  Compare only backend-matched prices on other platforms.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, Image, ActivityIndicator, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { T, font, money } from '../theme/tokens';
+import { compareElsewhere } from '../lib/deals';
 import { Card, Header, Pill, Brand } from '../components/ui';
 import { Icon } from '../components/icons';
 import Food from '../components/Food';
@@ -22,16 +22,19 @@ const platformKey = (name = '') => {
   if (n.includes('yemeksepeti')) return 'yemeksepeti';
   if (n.includes('trendyol'))    return 'trendyol';
   if (n.includes('getir'))       return 'getir';
+  if (n.includes('migros'))      return 'migros';
+  if (n.includes('tıkla') || n.includes('tikla')) return 'tiklagelsin';
   return n;
 };
 
-// Static platform filter options (kept incl. Getir as forward-looking UI).
+// Active platform filters; retired Getir prices cannot match any deal.
 // Dot colour is pulled from LIVE platform hex_color where present, never hardcoded.
 const SM_PLATFORMS = [
   { id: 'all',         label: 'Tümü' },
   { id: 'yemeksepeti', label: 'Yemeksepeti' },
   { id: 'trendyol',    label: 'Trendyol' },
-  { id: 'getir',       label: 'Getir' },
+  { id: 'migros',      label: 'Migros' },
+  { id: 'tiklagelsin', label: 'Tıklagelsin' },
 ];
 
 const discountText = (c) =>
@@ -172,7 +175,7 @@ function CodesView({ codes, openCode }) {
   );
 }
 
-// ── ÖZEL MENÜLER segment — platform-exclusive bundles, grouped by restaurant ──
+// ── ÖZEL MENÜLER segment — special-menu deals, grouped by restaurant ──
 function SpecialMenusView({ groups }) {
   const navigation = useNavigation();
   const [q, setQ] = useState('');
@@ -180,7 +183,7 @@ function SpecialMenusView({ groups }) {
   const [plat, setPlat] = useState('all');
   const [cat, setCat] = useState('all');
 
-  // Platform chip dot colours come from live hex_color (Getir absent → no dot).
+  // Platform chip dot colours come from live hex_color.
   const platHex = useMemo(() => {
     const m = {};
     for (const g of groups) for (const b of g.bundles) {
@@ -273,7 +276,7 @@ function SpecialMenusView({ groups }) {
       ) : null}
 
       <Text style={s.smIntro}>
-        Yalnızca tek bir platformda bulunan özel menüler. <Text style={s.smIntroFaint}>Nereden alacağını rozet gösterir.</Text>
+        Tek bir platformun özel menüleri ve kampanyaları. <Text style={s.smIntroFaint}>Aynı menü başka platformda da satılıyorsa fiyatını altında görürsün.</Text>
       </Text>
 
       {filtered.length === 0 ? (
@@ -331,7 +334,7 @@ function BundleCard({ bundle, food }) {
   return (
     <Card pad={0} style={s.bundleCard}>
       <View style={s.bundleBody}>
-        {/* platform badge + plain price (no comparison, no savings) */}
+        {/* platform badge + current price */}
         <View style={s.bundleTop}>
           <PlatformBadge platform={bundle.platform} />
           <Text style={s.bundlePrice}>{money(bundle.price)}</Text>
@@ -340,6 +343,7 @@ function BundleCard({ bundle, food }) {
           <View style={s.bundleFoodTile}><Food name={food} s={34} /></View>
           <Text style={s.bundleName}>{bundle.name}</Text>
         </View>
+        <Elsewhere bundle={bundle} />
         {/* design element — deep links to platforms don't exist yet */}
         <View style={s.goRow}>
           <Pressable style={({ pressed }) => [s.goBtn, pressed && { opacity: 0.85 }]} onPress={() => {}}>
@@ -348,12 +352,38 @@ function BundleCard({ bundle, food }) {
           </Pressable>
         </View>
       </View>
-      {/* exclusivity footer */}
+      {/* Distinguish an exclusive menu from a platform-specific campaign. */}
       <View style={s.bundleFooter}>
         <View style={[s.checkDot, { backgroundColor: b.bg }]}><Icon name="check" s={11} c="#fff" sw={3.2} /></View>
-        <Text style={s.footerText}>Yalnızca <Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text>'de</Text>
+        <Text style={s.footerText}>{bundle.elsewhere?.length ? 'Bu kampanya yalnızca ' : 'Yalnızca '}<Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text>'de</Text>
       </View>
     </Card>
+  );
+}
+
+// The same product on other platforms (backend `elsewhere`, founder-reviewed
+// matching, fresh prices only). Shown only when it exists — never invented.
+function Elsewhere({ bundle }) {
+  const { rows, diff } = compareElsewhere(bundle);
+  if (!rows.length) return null;
+  return (
+    <View style={s.elseBox}>
+      <Text style={s.elseTitle}>Aynı menü diğer platformlarda</Text>
+      <View style={s.elseRow}>
+        {rows.map((r) => (
+          <View key={String(r.platform?.id)} style={s.elseChip}>
+            <Text style={s.elseChipText}>{r.platform?.name} {money(r.price)}</Text>
+          </View>
+        ))}
+      </View>
+      {diff > 0 ? (
+        <Text style={s.elseGood}>Burada {money(diff)} daha ucuz</Text>
+      ) : diff < 0 ? (
+        <Text style={s.elseBad}>Başka platformda {money(-diff)} daha ucuz</Text>
+      ) : (
+        <Text style={s.elseSame}>Fiyat aynı</Text>
+      )}
+    </View>
   );
 }
 
@@ -449,6 +479,14 @@ const s = StyleSheet.create({
   checkDot:       { width: 18, height: 18, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   footerText:     { fontSize: 12, fontFamily: font.bold, color: T.sub },
   footerStrong:   { fontFamily: font.extrabold },
+  elseBox:        { marginTop: 12, padding: 10, borderRadius: 12, backgroundColor: T.bg, gap: 6 },
+  elseTitle:      { fontSize: 11.5, fontFamily: font.bold, color: T.sub },
+  elseRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  elseChip:       { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, backgroundColor: T.white, borderWidth: 1, borderColor: T.line },
+  elseChipText:   { fontSize: 12, fontFamily: font.semibold, color: T.ink },
+  elseGood:       { fontSize: 12.5, fontFamily: font.extrabold, color: T.green },
+  elseBad:        { fontSize: 12.5, fontFamily: font.bold, color: T.sub },
+  elseSame:       { fontSize: 12.5, fontFamily: font.bold, color: T.sub },
 
   // platform badge
   platBadge:     { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 10, paddingVertical: 7, paddingLeft: 8, paddingRight: 12, alignSelf: 'flex-start', flexShrink: 1 },

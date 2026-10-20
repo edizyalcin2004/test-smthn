@@ -27,13 +27,12 @@ const platformKey = (name = '') => {
   return n;
 };
 
-// Static platform filter options (kept incl. Getir as forward-looking UI).
+// Active platform filters; retired Getir prices cannot match any deal.
 // Dot colour is pulled from LIVE platform hex_color where present, never hardcoded.
 const SM_PLATFORMS = [
   { id: 'all',         label: 'Tümü' },
   { id: 'yemeksepeti', label: 'Yemeksepeti' },
   { id: 'trendyol',    label: 'Trendyol' },
-  { id: 'getir',       label: 'Getir' },
   { id: 'migros',      label: 'Migros' },
   { id: 'tiklagelsin', label: 'Tıklagelsin' },
 ];
@@ -184,7 +183,7 @@ function SpecialMenusView({ groups }) {
   const [plat, setPlat] = useState('all');
   const [cat, setCat] = useState('all');
 
-  // Platform chip dot colours come from live hex_color (Getir absent → no dot).
+  // Platform chip dot colours come from live hex_color.
   const platHex = useMemo(() => {
     const m = {};
     for (const g of groups) for (const b of g.bundles) {
@@ -353,10 +352,10 @@ function BundleCard({ bundle, food }) {
           </Pressable>
         </View>
       </View>
-      {/* Source platform, without claiming exclusivity for matched menus. */}
+      {/* Distinguish an exclusive menu from a platform-specific campaign. */}
       <View style={s.bundleFooter}>
         <View style={[s.checkDot, { backgroundColor: b.bg }]}><Icon name="check" s={11} c="#fff" sw={3.2} /></View>
-        <Text style={s.footerText}><Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text> fırsatı</Text>
+        <Text style={s.footerText}>{bundle.elsewhere?.length ? 'Bu kampanya yalnızca ' : 'Yalnızca '}<Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text>'de</Text>
       </View>
     </Card>
   );

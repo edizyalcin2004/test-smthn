@@ -22,6 +22,8 @@ const platformKey = (name = '') => {
   if (n.includes('yemeksepeti')) return 'yemeksepeti';
   if (n.includes('trendyol'))    return 'trendyol';
   if (n.includes('getir'))       return 'getir';
+  if (n.includes('migros'))      return 'migros';
+  if (n.includes('tıkla') || n.includes('tikla')) return 'tiklagelsin';
   return n;
 };
 
@@ -31,7 +33,8 @@ const SM_PLATFORMS = [
   { id: 'all',         label: 'Tümü' },
   { id: 'yemeksepeti', label: 'Yemeksepeti' },
   { id: 'trendyol',    label: 'Trendyol' },
-  { id: 'getir',       label: 'Getir' },
+  { id: 'migros',      label: 'Migros' },
+  { id: 'tiklagelsin', label: 'Tıklagelsin' },
 ];
 
 const discountText = (c) =>
@@ -273,7 +276,7 @@ function SpecialMenusView({ groups }) {
       ) : null}
 
       <Text style={s.smIntro}>
-        Yalnızca tek bir platformda bulunan özel menüler. <Text style={s.smIntroFaint}>Nereden alacağını rozet gösterir.</Text>
+        Tek bir platformun özel menüleri ve kampanyaları. <Text style={s.smIntroFaint}>Aynı menü başka platformda da satılıyorsa fiyatını altında görürsün.</Text>
       </Text>
 
       {filtered.length === 0 ? (
@@ -340,6 +343,7 @@ function BundleCard({ bundle, food }) {
           <View style={s.bundleFoodTile}><Food name={food} s={34} /></View>
           <Text style={s.bundleName}>{bundle.name}</Text>
         </View>
+        <Elsewhere bundle={bundle} />
         {/* design element — deep links to platforms don't exist yet */}
         <View style={s.goRow}>
           <Pressable style={({ pressed }) => [s.goBtn, pressed && { opacity: 0.85 }]} onPress={() => {}}>
@@ -354,6 +358,35 @@ function BundleCard({ bundle, food }) {
         <Text style={s.footerText}>Yalnızca <Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text>'de</Text>
       </View>
     </Card>
+  );
+}
+
+// The same product on other platforms (backend `elsewhere`, founder-reviewed
+// matching, fresh prices only). Shown only when it exists — never invented.
+function Elsewhere({ bundle }) {
+  const rows = bundle.elsewhere || [];
+  if (!rows.length) return null;
+  const here = Number(bundle.price);
+  const best = Math.min(...rows.map((r) => Number(r.price)));
+  const diff = Math.round(best - here);
+  return (
+    <View style={s.elseBox}>
+      <Text style={s.elseTitle}>Aynı menü diğer platformlarda</Text>
+      <View style={s.elseRow}>
+        {rows.map((r) => (
+          <View key={String(r.platform?.id)} style={s.elseChip}>
+            <Text style={s.elseChipText}>{r.platform?.name} {money(r.price)}</Text>
+          </View>
+        ))}
+      </View>
+      {diff > 0 ? (
+        <Text style={s.elseGood}>Burada ₺{diff} daha ucuz</Text>
+      ) : diff < 0 ? (
+        <Text style={s.elseBad}>Başka platformda ₺{-diff} daha ucuz</Text>
+      ) : (
+        <Text style={s.elseSame}>Fiyat aynı</Text>
+      )}
+    </View>
   );
 }
 
@@ -449,6 +482,14 @@ const s = StyleSheet.create({
   checkDot:       { width: 18, height: 18, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   footerText:     { fontSize: 12, fontFamily: font.bold, color: T.sub },
   footerStrong:   { fontFamily: font.extrabold },
+  elseBox:        { marginTop: 12, padding: 10, borderRadius: 12, backgroundColor: T.bg, gap: 6 },
+  elseTitle:      { fontSize: 11.5, fontFamily: font.bold, color: T.sub },
+  elseRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  elseChip:       { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, backgroundColor: T.white, borderWidth: 1, borderColor: T.line },
+  elseChipText:   { fontSize: 12, fontFamily: font.semibold, color: T.ink },
+  elseGood:       { fontSize: 12.5, fontFamily: font.extrabold, color: T.green },
+  elseBad:        { fontSize: 12.5, fontFamily: font.bold, color: T.sub },
+  elseSame:       { fontSize: 12.5, fontFamily: font.bold, color: T.sub },
 
   // platform badge
   platBadge:     { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 10, paddingVertical: 7, paddingLeft: 8, paddingRight: 12, alignSelf: 'flex-start', flexShrink: 1 },

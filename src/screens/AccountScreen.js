@@ -39,7 +39,7 @@ export default function AccountScreen({ navigation }) {
           <Image source={mascot} style={s.heroMascot} resizeMode="contain" />
           <View style={{ maxWidth: '68%' }}>
             <Text style={s.heroTitle}>Hesap gerekmez</Text>
-            <Text style={s.heroSub}>Pryce'ı kayıt olmadan kullanıyorsun. Sipariş geçmişin ve tasarrufun yalnızca bu telefonda tutulur.</Text>
+            <Text style={s.heroSub}>Doybi'yi kayıt olmadan kullanıyorsun. Sipariş geçmişin ve tasarrufun yalnızca bu telefonda tutulur.</Text>
           </View>
         </LinearGradient>
       </View>
@@ -60,7 +60,7 @@ export default function AccountScreen({ navigation }) {
         <Card style={s.soonRow}>
           <View style={s.soonIcon}><Icon name="crown" s={20} c={T.amber} /></View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.soonTitle}>Hesap, Pryce Points ve Pro</Text>
+            <Text style={s.soonTitle}>Hesap, puanlar ve Pro</Text>
             <Text style={s.soonSub}>Henüz yok. Hazır olduğunda burada göreceksin.</Text>
           </View>
           <Pill bg={T.cream} fg={T.gold}>Yakında</Pill>
@@ -76,7 +76,7 @@ export default function AccountScreen({ navigation }) {
             <Icon name="chevR" s={18} c={T.faint} sw={2.2} />
           </Pressable>
         </Card>
-        {VERSION ? <Text style={s.version}>Pryce · Sürüm {VERSION}</Text> : null}
+        {VERSION ? <Text style={s.version}>Doybi · Sürüm {VERSION}</Text> : null}
       </View>
     </Screen>
   );

@@ -24,7 +24,7 @@ export default function PrivacyScreen({ navigation }) {
               <Text style={s.body}>{CONTROLLER.contact}</Text>
             </>
           ) : (
-            <Text style={s.body}>Pryce şu an test aşamasında. Veri sorumlusu ve iletişim bilgisi genel yayından önce buraya eklenecek.</Text>
+            <Text style={s.body}>Doybi şu an test aşamasında. Veri sorumlusu ve iletişim bilgisi genel yayından önce buraya eklenecek.</Text>
           )}
         </Card>
       </View>

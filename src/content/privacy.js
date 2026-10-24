@@ -8,13 +8,13 @@
 // screen says so instead of showing a placeholder.
 export const CONTROLLER = null; // e.g. { name: '...', contact: '...' }
 
-export const UPDATED = '14 Ekim 2026';
+export const UPDATED = '25 Ekim 2026';
 
 export const SECTIONS = [
   {
     title: 'Kısaca',
     body: [
-      'Pryce hesap açmadan çalışır. Adın, e-postan, telefon numaran, konumun, reklam kimliğin ya da cihaz kimliğin toplanmaz.',
+      'Doybi hesap açmadan çalışır. Adın, e-postan, telefon numaran, konumun, reklam kimliğin ya da cihaz kimliğin toplanmaz.',
       'Sunucuya giden her şey kimliksizdir: seni tanıyan bir kod taşımaz.',
     ],
   },
@@ -22,7 +22,7 @@ export const SECTIONS = [
     title: 'Yalnızca telefonunda kalanlar',
     body: [
       'Onayladığın siparişlerin listesi ve tasarruf hesabın.',
-      'Pryce\'ı ilk kullandığın gün ve bu hafta karşılaştırma yapıp yapmadığın. Sunucuya bunların kendisi değil, yalnızca bir aralık ("1-7 gün" gibi) ve evet/hayır bilgisi gider.',
+      'Doybi\'yi ilk kullandığın gün ve bu hafta karşılaştırma yapıp yapmadığın. Sunucuya bunların kendisi değil, yalnızca bir aralık ("1-7 gün" gibi) ve evet/hayır bilgisi gider.',
       'Kopyaladığın indirim kodları telefonunun panosuna gider, bize gelmez.',
     ],
   },
@@ -53,7 +53,8 @@ export const SECTIONS = [
   {
     title: 'IP adresi ve sunucu',
     body: [
-      'Pryce veritabanına IP adresi yazılmaz.',
+      'Doybi veritabanına IP adresi yazılmaz.',
+      'Kötüye kullanımı önlemek için sunucu, bir IP adresinden gelen istekleri yalnızca bellekte ve en fazla bir saat sayar; bu sayım kaydedilmez ve sunucu yeniden başlayınca silinir.',
       'Sunucumuz Railway üzerinde, Türkiye dışında çalışır. Her internet hizmetinde olduğu gibi barındırma sağlayıcısı, bağlantı kayıtlarında IP adresini kısa süreli işleyebilir.',
     ],
   },
@@ -67,13 +68,13 @@ export const SECTIONS = [
   {
     title: 'Platforma geçtiğinde',
     body: [
-      'Bir platformun sayfasını açtığında Pryce o platforma senin hakkında bir bilgi göndermez. Orada yaptıkların o platformun kendi gizlilik politikasına tabidir.',
+      'Bir platformun sayfasını açtığında Doybi o platforma senin hakkında bir bilgi göndermez. Orada yaptıkların o platformun kendi gizlilik politikasına tabidir.',
     ],
   },
   {
     title: 'Silme ve hakların',
     body: [
-      'Telefonundaki tüm Pryce verilerini uygulamayı silerek silebilirsin.',
+      'Telefonundaki tüm Doybi verilerini uygulamayı silerek silebilirsin.',
       'Sunucudaki kayıtlar seni tanıyan bir kod taşımadığı için sana bağlanamaz; bu yüzden kişiye özel bulunup silinemezler.',
       'KVKK madde 11 kapsamındaki soruların ve başvuruların için aşağıdaki iletişim bilgisini kullanabilirsin.',
     ],

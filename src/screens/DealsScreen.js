@@ -5,7 +5,7 @@
 //                  grouped by restaurant. Single platform, single price, honest:
 //                  NO winner badge, NO savings, NO strikethrough, NO ratings.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TextInput, Pressable, Image, ActivityIndicator, RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, Image, ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { T, font, money } from '../theme/tokens';
@@ -15,6 +15,7 @@ import Food from '../components/Food';
 import { platformBrand, restaurantTile } from '../lib/brand';
 import { getDiscountCodes, getSpecialDeals } from '../api/client';
 import { useCodeSheet } from '../components/CodeSheet';
+import { safeOrderURL } from '../lib/orderLinks';
 
 // Normalise a live platform name ("Trendyol Yemek") to a stable filter key.
 const platformKey = (name = '') => {
@@ -97,14 +98,14 @@ export default function DealsScreen() {
         entry = { restaurant_id: g.restaurant_id, restaurant_name: g.restaurant_name, bundles: [] };
         byId.set(g.restaurant_id, entry);
       }
-      for (const it of g.items || []) entry.bundles.push({ ...it, platform: g.platform });
+      for (const it of g.items || []) entry.bundles.push({ ...it, platform: g.platform, order_url: g.order_url });
     }
     return [...byId.values()];
   }, [special]);
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 4 }]}>
-      <Header title="Fırsatlar" onBell={() => {}} bellBadge={false} />
+      <Header title="Fırsatlar" />
       <View style={s.segWrap}>
         <Segmented
           value={seg}
@@ -328,6 +329,11 @@ function FilterRow({ label, options, value, onPick, platform }) {
 
 function BundleCard({ bundle, food }) {
   const b = platformBrand(bundle.platform);
+  const url = safeOrderURL(bundle.order_url);
+  const openApp = async () => {
+    try { await Linking.openURL(url); }
+    catch { Alert.alert('Bağlantı açılamadı', 'Lütfen platformu kendi uygulamasından aç.'); }
+  };
   return (
     <Card pad={0} style={s.bundleCard}>
       <View style={s.bundleBody}>
@@ -340,13 +346,16 @@ function BundleCard({ bundle, food }) {
           <View style={s.bundleFoodTile}><Food name={food} s={34} /></View>
           <Text style={s.bundleName}>{bundle.name}</Text>
         </View>
-        {/* design element — deep links to platforms don't exist yet */}
-        <View style={s.goRow}>
-          <Pressable style={({ pressed }) => [s.goBtn, pressed && { opacity: 0.85 }]} onPress={() => {}}>
-            <Text style={s.goBtnText}>Uygulamaya git</Text>
-            <Icon name="chevR" s={13} c="#fff" sw={2.6} />
-          </Pressable>
-        </View>
+        {/* opens the backend's verified link for this platform (restaurant page
+            where we scrape it, else the platform's entry page); hidden when none */}
+        {url ? (
+          <View style={s.goRow}>
+            <Pressable style={({ pressed }) => [s.goBtn, pressed && { opacity: 0.85 }]} onPress={openApp}>
+              <Text style={s.goBtnText}>Uygulamaya git</Text>
+              <Icon name="chevR" s={13} c="#fff" sw={2.6} />
+            </Pressable>
+          </View>
+        ) : null}
       </View>
       {/* exclusivity footer */}
       <View style={s.bundleFooter}>

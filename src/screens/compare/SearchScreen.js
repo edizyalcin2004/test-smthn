@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { T, font } from '../../theme/tokens';
-import { Screen, Card, Header, SectionHead, RoundBtn } from '../../components/ui';
+import { Screen, Card, Header, SectionHead } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import Food from '../../components/Food';
 import { restaurantTile } from '../../lib/brand';
@@ -124,11 +124,10 @@ export default function SearchScreen({ navigation }) {
             <Pressable hitSlop={8} onPress={() => setQ('')}><Icon name="x" s={16} c={T.faint} /></Pressable>
           ) : null}
         </View>
-        <RoundBtn size={48} bg={T.white} style={s.filterBtn}><Icon name="filter" s={20} c={T.ink} /></RoundBtn>
       </View>
 
       <View style={s.section}>
-        <SectionHead title="Yakındaki restoranlar" />
+        <SectionHead title="Restoranlar" />
         {loading ? (
           <Card style={s.stateCard}><ActivityIndicator color={T.blue} /></Card>
         ) : error ? (

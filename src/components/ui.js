@@ -3,13 +3,14 @@
 import { Children, isValidElement } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { T, font } from '../theme/tokens';
+import { T, font, serif } from '../theme/tokens';
 import { Icon } from './icons';
 
 // soft card shadow (≈ design's layered box-shadow)
+// The design draws cards with a hairline border and almost no shadow.
 const cardShadow = Platform.select({
-  ios: { shadowColor: T.ink, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 16 },
-  android: { elevation: 3 },
+  ios: { shadowColor: T.ink, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 10 },
+  android: { elevation: 1 },
   default: {},
 });
 
@@ -34,7 +35,7 @@ export function Screen({ children, pad = true, style, contentStyle }) {
 export function Card({ children, style, onPress, pad = 16 }) {
   const Cmp = onPress ? Pressable : View;
   return (
-    <Cmp onPress={onPress} style={[{ backgroundColor: T.white, borderRadius: 20, padding: pad }, cardShadow, style]}>
+    <Cmp onPress={onPress} style={[{ backgroundColor: T.white, borderRadius: 16, padding: pad, borderWidth: 1, borderColor: T.line }, cardShadow, style]}>
       {children}
     </Cmp>
   );
@@ -67,7 +68,7 @@ export function SectionHead({ title, action, onAction, style }) {
   );
 }
 
-export function PrimaryButton({ children, onPress, bg = T.blue, fg = '#fff', style, textStyle }) {
+export function PrimaryButton({ children, onPress, bg = T.ink, fg = '#fff', style, textStyle }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [s.primaryBtn, { backgroundColor: bg, opacity: pressed ? 0.92 : 1 }, style]}>
       <Text style={[s.primaryBtnText, { color: fg }, textStyle]}>{children}</Text>
@@ -119,19 +120,61 @@ export function Brand({ brand, size = 44, radius = 13 }) {
   );
 }
 
+// filter chip (design `.chip`): hairline pill, ink when active
+export function Chip({ label, active, onPress, style }) {
+  return (
+    <Pressable onPress={onPress} style={[s.chip, active && s.chipActive, style]}>
+      <Text style={[s.chipText, active && s.chipTextActive]} numberOfLines={1}>{label}</Text>
+    </Pressable>
+  );
+}
+
+// two-or-more option switch (design `.segmented`)
+export function Segmented({ options, value, onChange, style }) {
+  return (
+    <View style={[s.seg, style]}>
+      {options.map((o) => (
+        <Pressable key={o.value} onPress={() => onChange(o.value)} style={[s.segItem, value === o.value && s.segItemActive]}>
+          <Text style={[s.segText, value === o.value && s.segTextActive]}>{o.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+// Big page title with an optional serif-italic accent line (design `.title em`)
+export function Title({ children, accent, style }) {
+  return (
+    <Text style={[s.title, style]}>
+      {children}{accent ? <Text style={s.titleAccent}>{(children ? '\n' : '') + accent}</Text> : null}
+    </Text>
+  );
+}
+
 const s = StyleSheet.create({
+  chip: { borderWidth: 1, borderColor: T.line, borderRadius: 30, paddingVertical: 8, paddingHorizontal: 13, backgroundColor: T.white },
+  chipActive: { backgroundColor: T.ink, borderColor: T.ink },
+  chipText: { fontSize: 13, fontFamily: font.medium, color: T.ink },
+  chipTextActive: { color: '#fff' },
+  seg: { backgroundColor: '#EAECE5', padding: 4, flexDirection: 'row', borderRadius: 12 },
+  segItem: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 9 },
+  segItemActive: { backgroundColor: T.ink },
+  segText: { fontSize: 13.5, fontFamily: font.semibold, color: T.ink },
+  segTextActive: { color: '#fff' },
+  title: { fontSize: 30, lineHeight: 35, letterSpacing: -1.2, fontFamily: font.medium, color: T.ink },
+  titleAccent: { fontFamily: serif, fontStyle: 'italic', letterSpacing: -0.6 },
   pill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, paddingVertical: 4, paddingHorizontal: 9, borderRadius: 8 },
   pillText: { fontSize: 11.5, fontFamily: font.bold, lineHeight: 14 },
-  eyebrow: { fontSize: 11, fontFamily: font.extrabold, letterSpacing: 1.3, textTransform: 'uppercase' },
+  eyebrow: { fontSize: 10, fontFamily: font.bold, letterSpacing: 1.6, textTransform: 'uppercase' },
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 },
   sectionTitle: { fontSize: 17, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.2 },
-  sectionAction: { fontSize: 13, fontFamily: font.bold, color: T.blue },
-  primaryBtn: { width: '100%', borderRadius: 16, paddingVertical: 16, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  primaryBtnText: { fontFamily: font.extrabold, fontSize: 16, letterSpacing: -0.2 },
+  sectionAction: { fontSize: 13, fontFamily: font.semibold, color: T.ink, textDecorationLine: 'underline' },
+  primaryBtn: { width: '100%', borderRadius: 14, paddingVertical: 15, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
+  primaryBtnText: { fontFamily: font.semibold, fontSize: 15, letterSpacing: -0.1 },
   roundBtn: {
-    borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: T.line,
     ...Platform.select({
-      ios: { shadowColor: T.ink, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.16, shadowRadius: 8 },
+      ios: { shadowColor: T.ink, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6 },
       android: { elevation: 2 },
       default: {},
     }),
@@ -139,6 +182,6 @@ const s = StyleSheet.create({
   badge: { position: 'absolute', top: -3, right: -3, width: 9, height: 9, borderRadius: 999, backgroundColor: T.coral, borderWidth: 2, borderColor: T.bg },
   header: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 8, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
-  headerTitle: { fontSize: 25, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.5 },
+  headerTitle: { fontSize: 28, fontFamily: font.medium, color: T.ink, letterSpacing: -1.1 },
   headerSub: { fontSize: 13.5, color: T.sub, marginTop: 3, fontFamily: font.semibold },
 });

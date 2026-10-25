@@ -71,12 +71,12 @@ export default function App() {
             tabBar={(props) => <TabBar {...props} />}
             screenOptions={{ headerShown: false }}
           >
-            {/* Hub sits at the CENTRE (position 3 of 5). initialRouteName keeps
-                the app landing on Hub regardless of its position in this list. */}
-            <Tab.Screen name="Compare" component={CompareScreen} />
-            <Tab.Screen name="Budget"  component={BudgetScreen} />
+            {/* Doybi design order (2026-10-25): Keşfet (Hub) first and home,
+                then Karşılaştır, Fırsatlar, Tasarruf, Hesabım. */}
             <Tab.Screen name="Hub"     component={HubScreen} />
+            <Tab.Screen name="Compare" component={CompareScreen} />
             <Tab.Screen name="Deals"   component={DealsScreen} />
+            <Tab.Screen name="Budget"  component={BudgetScreen} />
             <Tab.Screen name="Account" component={AccountStackScreen} />
           </Tab.Navigator>
           <OrderCheck />

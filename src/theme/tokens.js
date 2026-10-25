@@ -1,19 +1,20 @@
 import { Platform } from 'react-native';
 
-// ── NEW navy/gold design system (ported from design-ref ui.jsx `T`) ──
-// Pinned exact hexes. Use `T` for all new-design screens/components.
+// ── Doybi design system (redesign PR 1, 2026-10-25) ──
 export const T = {
-  // core
-  navy:     '#061B3A',
-  navy2:    '#0B2348',
-  navySoft: '#13315C',
-  ink:      '#0B1F3D',
-  blue:     '#2F66FF',
-  blueSoft: '#EAF1FF',
-  blueSoft2:'#F0F5FF',
-  amber:    '#FFC857',
-  gold:     '#F5A524',
-  orange:   '#FF7A1A',
+  // core — Doybi design (Codex, approved Oct 2026): ivory canvas, deep navy
+  // type, yellow highlight, sage/peach support. Key NAMES are kept so every
+  // screen recolours from here; values follow the design's CSS variables.
+  navy:     '#0A2741',
+  navy2:    '#12324F',
+  navySoft: '#1E405F',
+  ink:      '#0A2741',
+  blue:     '#0A2741', // the design has no royal blue: links/actions are ink
+  blueSoft: '#E5EBE0', // sage
+  blueSoft2:'#EFEEE7',
+  amber:    '#FFC439', // design yellow
+  gold:     '#9A6B12', // readable gold text on light surfaces
+  orange:   '#E9823A',
   cajun:    '#EE9B2E', // Cajun Corner tile accent (warm orange wordmark outline)
   // restaurant tile accents — brand-EVOKING colours only, never logos (IP-safe)
   popeyes:       '#FF7D00', // saturated orange
@@ -23,22 +24,29 @@ export const T = {
   maydonozDoner: '#2F9E44', // maydonoz = parsley → green
   dominos:       '#006491', // deep blue
   pizzaBulls:    '#262A33', // charcoal
-  coral:    '#FF5A4E',
-  red:      '#E94235',
-  green:    '#2BAE66',
-  greenSoft:'#E4F7EC',
-  mint:     '#BFEFD2',
-  cream:    '#FFF3DA',
-  paper:    '#F6E4BE',
+  coral:    '#E2674F',
+  red:      '#C8432F',
+  green:    '#35634F', // design green
+  greenSoft:'#E5EBE0', // sage
+  mint:     '#CFDCCB',
+  cream:    '#FFF0C5', // yellow-tinted panel (coupon/highlight)
+  paper:    '#F0E8D8',
+  peach:    '#F8DFC9',
+  sage:     '#E5EBE0',
+  yellow:   '#FFC439',
   // neutrals
-  bg:       '#F6F8FC',
-  white:    '#FFFFFF',
-  line:     '#EAEEF5',
-  line2:    '#E2E8F2',
-  sub:      '#6B7793',
-  faint:    '#9AA6BE',
-  gray:     '#D9E2F2',
+  bg:       '#F7F5EF', // ivory canvas
+  white:    '#FFFEFA', // card surface
+  line:     '#E6E4DC',
+  line2:    '#DFDFD4',
+  sub:      '#78817F',
+  faint:    '#A3A8A0',
+  gray:     '#E6E4DC',
 };
+
+// Short serif accents ("Hangisi *daha uygun?*") — the design uses Georgia
+// italic; this is the platform's built-in serif, no extra font download.
+export const serif = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
 
 // Plus Jakarta Sans (loaded in App.js). All design weights are available.
 export const font = {

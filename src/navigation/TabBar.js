@@ -11,11 +11,19 @@ const TAB_ICONS = {
   Deals:   'deals',
   Account: 'account',
 };
+// Doybi design labels (Turkish), by route name.
+const TAB_LABELS = {
+  Hub:     'Keşfet',
+  Compare: 'Karşılaştır',
+  Deals:   'Fırsatlar',
+  Budget:  'Tasarruf',
+  Account: 'Hesabım',
+};
 
 function TabItem({ route, isFocused, descriptor, onPress, onLongPress }) {
   const scale = useRef(new Animated.Value(1)).current;
   const { options } = descriptor;
-  const label = options.tabBarLabel ?? options.title ?? route.name;
+  const label = options.tabBarLabel ?? TAB_LABELS[route.name] ?? options.title ?? route.name;
   const iconName = TAB_ICONS[route.name] ?? 'home';
 
   const pressIn = () =>
@@ -84,7 +92,7 @@ const s = StyleSheet.create({
   },
   pill: {
     backgroundColor: T.navy,
-    borderRadius: 26,
+    borderRadius: 23,
     paddingHorizontal: 8,
     paddingTop: 11,
     paddingBottom: 12,
@@ -92,7 +100,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     ...Platform.select({
-      ios: { shadowColor: T.navy, shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.4, shadowRadius: 22 },
+      ios: { shadowColor: T.navy, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 18 },
       android: { elevation: 12 },
       default: {},
     }),
@@ -100,6 +108,6 @@ const s = StyleSheet.create({
   pressable: { flex: 1, alignItems: 'center' },
   item: { alignItems: 'center', justifyContent: 'center', paddingVertical: 2, paddingHorizontal: 6, gap: 4 },
   label: { fontSize: 10.5, marginTop: 1 },
-  labelActive: { fontFamily: font.extrabold, color: '#fff' },
-  labelInactive: { fontFamily: font.semibold, color: 'rgba(255,255,255,0.5)' },
+  labelActive: { fontFamily: font.semibold, color: '#fff' },
+  labelInactive: { fontFamily: font.medium, color: '#AEBBC2' },
 });

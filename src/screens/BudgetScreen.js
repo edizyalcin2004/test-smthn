@@ -53,7 +53,7 @@ export default function BudgetScreen({ navigation }) {
           <View style={{ maxWidth: '72%' }}>
             <View style={s.heroEyebrow}>
               <Icon name="spark" s={14} c={T.amber} sw={0} />
-              <Text style={s.heroEyebrowText}>{sv.month} ayında Pryce ile</Text>
+              <Text style={s.heroEyebrowText}>{sv.month} ayında Doybi ile</Text>
             </View>
             <View style={s.heroAmountRow}>
               <Text style={s.heroTL}>₺</Text>

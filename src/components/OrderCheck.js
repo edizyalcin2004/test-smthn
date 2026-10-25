@@ -55,7 +55,7 @@ export default function OrderCheck({ onConfirmed }) {
           </Text>
           <Text style={s.body}>
             {p.platform.name} · {money(p.paid)}
-            {p.wasCheapest && p.platformsCompared >= 2 ? <Text> · en iyi <Text style={s.gold}>Pryce</Text> ile</Text> : null}
+            {p.wasCheapest && p.platformsCompared >= 2 ? <Text> · en iyi <Text style={s.gold}>Doybi</Text> ile</Text> : null}
           </Text>
           <Text style={s.checkText}>Tasarruf, onayladığın tutarla diğer platformların karşılaştırılan fiyatlarına göre hesaplanır.</Text>
 

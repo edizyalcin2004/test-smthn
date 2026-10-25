@@ -1,7 +1,7 @@
 // Only https links to the delivery platforms we compare; anything else from
 // the API is ignored rather than opened (D-030).
 const HOSTS = new Set(['tgoyemek.com', 'www.yemeksepeti.com', 'www.migros.com.tr',
-  'www.tiklagelsin.com', 'siparis.mcdonalds.com.tr']);
+  'www.tiklagelsin.com', 'siparis.mcdonalds.com.tr', 'www.dominos.com.tr']);
 
 export function safeOrderURL(value) {
   try {

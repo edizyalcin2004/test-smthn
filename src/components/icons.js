@@ -159,7 +159,7 @@ export function Spark({ s = 14, o = 0.9, style }) {
 
 // ── tab bar icons (filled when active) ──
 export function TabIcon({ name, active }) {
-  const c = active ? T.blue : 'rgba(255,255,255,0.55)';
+  const c = active ? T.yellow : '#AEBBC2';
   const s = 23;
   const sw = 1.9;
   const wrap = (children) => (

@@ -7,6 +7,7 @@
 //                  another platform); without it there is no "cheaper" claim.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Linking, Alert, useWindowDimensions } from 'react-native';
+import { PressScale, Reveal } from '../lib/motion';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../theme/tokens';
@@ -143,7 +144,7 @@ function CodesView({ codes, openCode }) {
         const left = timeLeft(c.expiry_date);
         const who = eligibility(c);
         return (
-          <Pressable key={String(c.id)} onPress={() => openCode(c)} style={({ pressed }) => [s.codeCard, pressed && { opacity: 0.85 }]} accessibilityRole="button">
+          <PressScale key={String(c.id)} onPress={() => openCode(c)} style={s.codeCard} accessibilityRole="button">
             <View style={s.codeTop}>
               <View style={s.codeIcon}><Icon name="tag" s={22} c={T.ink} /></View>
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -156,7 +157,7 @@ function CodesView({ codes, openCode }) {
               <Text style={s.codeFootText}>{c.minimum_order != null ? `Min. ${money(num(c.minimum_order))}` : 'Alt limit yok'}</Text>
               <Text style={s.codeFootText} numberOfLines={1}>{[who, left].filter(Boolean).join(' · ')}</Text>
             </View>
-          </Pressable>
+          </PressScale>
         );
       })}
       <Note>Kodlar platformların herkese açık kampanya sayfalarından okunur. Son geçerlilik her zaman platformda kontrol edilir.</Note>
@@ -190,7 +191,7 @@ function SpecialMenusView({ bundles, onCodes }) {
         {plats.map((p) => <Chip key={p} label={p} active={plat === p} onPress={() => setPlat(p)} />)}
       </ScrollView>
       <View style={s.body}>
-        {shown.map((b) => <BundleCard key={`${b.platform?.id}-${b.id}`} b={b} artW={artW} />)}
+        {shown.map((b, i) => <Reveal key={`${b.platform?.id}-${b.id}`} index={i}><BundleCard b={b} artW={artW} /></Reveal>)}
         <Note>Fiyatlar platformun herkese açık sayfasında son görülen fiyattır. Teslimat ücreti hariç.</Note>
       </View>
     </View>

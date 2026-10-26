@@ -5,7 +5,8 @@
 // FoodArt: the original generic food illustration sheet (2x2: burger, pizza,
 // chicken, wrap). It is NOT a photo of any restaurant's product, and no
 // scraped food photography is used anywhere.
-import { View, Image } from 'react-native';
+import { View, Image, Animated } from 'react-native';
+import { useGesture } from '../lib/motion';
 import { T } from '../theme/tokens';
 
 const POSES = {
@@ -17,9 +18,18 @@ const POSES = {
 };
 const RATIO = { 'no-results': 421 / 520, 'empty-basket': 455 / 520, 'deal-search': 478 / 520, 'discount-code': 464 / 520, 'savings-success': 472 / 520 };
 
-export function Mascot({ pose = 'deal-search', size = 120, style }) {
+// Plays one short gesture when it appears (motion PR 5); `still` turns it off.
+export function Mascot({ pose = 'deal-search', size = 120, style, still = false }) {
   const src = POSES[pose] || POSES['deal-search'];
-  return <Image source={src} style={[{ width: size * (RATIO[pose] || 0.9), height: size }, style]} resizeMode="contain" accessible={false} />;
+  const transform = useGesture(pose, !still);
+  return (
+    <Animated.Image
+      source={src}
+      style={[{ width: size * (RATIO[pose] || 0.9), height: size, transformOrigin: '50% 85%', transform }, style]}
+      resizeMode="contain"
+      accessible={false}
+    />
+  );
 }
 
 const SHEET = require('../../assets/food-grid.jpg');

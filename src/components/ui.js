@@ -5,6 +5,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, serif } from '../theme/tokens';
 import { Icon } from './icons';
+import { PressScale } from '../lib/motion';
 
 // soft card shadow (≈ design's layered box-shadow)
 // The design draws cards with a hairline border and almost no shadow.
@@ -70,9 +71,9 @@ export function SectionHead({ title, action, onAction, style }) {
 
 export function PrimaryButton({ children, onPress, bg = T.ink, fg = '#fff', style, textStyle }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.primaryBtn, { backgroundColor: bg, opacity: pressed ? 0.92 : 1 }, style]}>
+    <PressScale onPress={onPress} accessibilityRole="button" style={[s.primaryBtn, { backgroundColor: bg }, style]}>
       <Text style={[s.primaryBtnText, { color: fg }, textStyle]}>{children}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -123,9 +124,9 @@ export function Brand({ brand, size = 44, radius = 13 }) {
 // filter chip (design `.chip`): hairline pill, ink when active
 export function Chip({ label, active, onPress, style }) {
   return (
-    <Pressable onPress={onPress} style={[s.chip, active && s.chipActive, style]}>
+    <PressScale onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!active }} style={[s.chip, active && s.chipActive, style]}>
       <Text style={[s.chipText, active && s.chipTextActive]} numberOfLines={1}>{label}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 

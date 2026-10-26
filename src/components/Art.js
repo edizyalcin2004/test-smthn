@@ -25,16 +25,18 @@ export function Mascot({ pose = 'deal-search', size = 120, style }) {
 const SHEET = require('../../assets/food-grid.jpg');
 const CELL = { burger: [0, 0], pizza: [1, 0], chicken: [0, 1], wrap: [1, 1] };
 
-// round (default) or rounded-square crop of one sheet cell
-export function FoodArt({ type = 'burger', size = 60, round = true, radius = 16, style }) {
+// round (default) or rounded-square crop of one sheet cell. `height` (< size)
+// gives a wide banner crop, centred vertically on the cell.
+export function FoodArt({ type = 'burger', size = 60, height, round = true, radius = 16, style }) {
   const [cx, cy] = CELL[type] || CELL.burger;
+  const h = height ?? size;
   return (
     <View
       accessible
       accessibilityLabel="Temsili yemek görseli"
-      style={[{ width: size, height: size, borderRadius: round ? size / 2 : radius, overflow: 'hidden', backgroundColor: T.cream }, style]}
+      style={[{ width: size, height: h, borderRadius: round ? Math.min(size, h) / 2 : radius, overflow: 'hidden', backgroundColor: T.cream }, style]}
     >
-      <Image source={SHEET} style={{ width: size * 2, height: size * 2, marginLeft: -cx * size, marginTop: -cy * size }} />
+      <Image source={SHEET} style={{ width: size * 2, height: size * 2, marginLeft: -cx * size, marginTop: -cy * size - (size - h) / 2 }} />
     </View>
   );
 }

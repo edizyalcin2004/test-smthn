@@ -1,487 +1,299 @@
-// DealsScreen — "Fırsatlar" with a segmented toggle [ Kodlar | Özel Menüler ].
-//   Kodlar       — live discount codes (soonest-expiry first), each opens the
-//                  shared CodeSheet. Unchanged behaviour.
-//   Özel Menüler — platform-EXCLUSIVE special-menu bundles from /special-deals,
-//                  grouped by restaurant. Single platform, single price, honest:
-//                  NO winner badge, NO savings, NO strikethrough, NO ratings.
+// DealsScreen — "Fırsatlar" (redesign PR 3, designs 11/13/20), wired live.
+//   Kodlar       — live discount codes, soonest expiry first; each opens the
+//                  shared CodeSheet with its full conditions.
+//   Özel menüler — platform-EXCLUSIVE bundles from /special-deals. Single
+//                  platform, single price. The only comparison shown is the
+//                  backend's own `elsewhere` list (the same menu matched on
+//                  another platform); without it there is no "cheaper" claim.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TextInput, Pressable, Image, ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Linking, Alert, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../theme/tokens';
-import { Card, Header, Pill, Brand } from '../components/ui';
+import { Title, Segmented, Chip, PrimaryButton } from '../components/ui';
 import { Icon } from '../components/icons';
-import Food from '../components/Food';
-import { platformBrand, restaurantTile } from '../lib/brand';
+import { FoodArt, Mascot, foodType } from '../components/Art';
 import { getDiscountCodes, getSpecialDeals } from '../api/client';
 import { useCodeSheet } from '../components/CodeSheet';
 import { safeOrderURL } from '../lib/orderLinks';
 
-// Normalise a live platform name ("Trendyol Yemek") to a stable filter key.
-const platformKey = (name = '') => {
-  const n = String(name).toLocaleLowerCase('tr');
-  if (n.includes('yemeksepeti')) return 'yemeksepeti';
-  if (n.includes('trendyol'))    return 'trendyol';
-  if (n.includes('getir'))       return 'getir';
-  return n;
-};
-
-// Static platform filter options (kept incl. Getir as forward-looking UI).
-// Dot colour is pulled from LIVE platform hex_color where present, never hardcoded.
-const SM_PLATFORMS = [
-  { id: 'all',         label: 'Tümü' },
-  { id: 'yemeksepeti', label: 'Yemeksepeti' },
-  { id: 'trendyol',    label: 'Trendyol' },
-  { id: 'getir',       label: 'Getir' },
-];
+const RETIRED = new Set(['Getir Yemek']);
+const num = (v) => Number(v ?? 0);
 
 const discountText = (c) =>
-  c.discount_type === 'percentage' ? `%${c.discount_value} indirim` : `₺${c.discount_value} indirim`;
+  c.discount_type === 'percentage' ? `%${num(c.discount_value)} indirim` : `${money(num(c.discount_value))} indirim`;
 
 function timeLeft(expiry) {
   if (!expiry) return null;
   const d = new Date(expiry);
   if (isNaN(d.getTime())) return null;
   const ms = d.getTime() - Date.now();
-  if (ms <= 0) return 'Doldu';
+  if (ms <= 0) return 'Süresi doldu';
   const days = Math.floor(ms / 86400000);
-  if (days >= 1) return `${days} gün`;
+  if (days >= 1) return `${days} gün kaldı`;
   const hrs = Math.floor(ms / 3600000);
-  if (hrs >= 1) return `${hrs} saat`;
-  return `${Math.max(1, Math.floor(ms / 60000))} dk`;
+  if (hrs >= 1) return `${hrs} saat kaldı`;
+  return `${Math.max(1, Math.floor(ms / 60000))} dk kaldı`;
+}
+
+// Who can use it — shown on the card so nobody is surprised at checkout.
+function eligibility(c) {
+  if (c.usage_limit === 'first_order') return 'İlk siparişe özel';
+  if (c.requires_membership) return 'Üyelik gerekir';
+  if (c.usage_limit === 'once_per_user') return 'Kişi başı 1 kez';
+  return null;
 }
 
 export default function DealsScreen() {
   const insets = useSafeAreaInsets();
   const { openCode } = useCodeSheet();
-  const [seg, setSeg] = useState('menuler'); // ref default: Özel Menüler first
+  const [seg, setSeg]               = useState('menuler');
   const [codes, setCodes]           = useState([]);
   const [special, setSpecial]       = useState([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError]           = useState(null);
+  const [error, setError]           = useState(false);
   const mounted                     = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
 
   const load = useCallback(async (isRefresh) => {
     if (!isRefresh) setLoading(true);
-    setError(null);
+    setError(false);
     try {
       const [c, sp] = await Promise.all([getDiscountCodes(), getSpecialDeals()]);
       if (mounted.current) { setCodes(c || []); setSpecial(sp || []); }
     } catch {
-      if (mounted.current) setError('Fırsatlar yüklenemedi. Bağlantını kontrol et.');
+      if (mounted.current) setError(true);
     } finally {
       if (mounted.current) { setLoading(false); setRefreshing(false); }
     }
   }, []);
   useEffect(() => { load(false); }, [load]);
-
   const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, [load]);
 
   const sortedCodes = useMemo(() => {
-    const ts = (c) => {
-      const d = c.expiry_date ? new Date(c.expiry_date).getTime() : NaN;
-      return isNaN(d) ? Infinity : d;
-    };
-    return [...codes].sort((a, b) => ts(a) - ts(b));
+    const ts = (c) => { const d = c.expiry_date ? new Date(c.expiry_date).getTime() : NaN; return isNaN(d) ? Infinity : d; };
+    return codes.filter((c) => !RETIRED.has(c.platform?.name)).sort((a, b) => ts(a) - ts(b));
   }, [codes]);
 
-  // Flatten /special-deals (groups are restaurant+platform) into one group per
-  // restaurant; each bundle carries its own platform object. Every restaurant
-  // the backend returns is rendered — visibility scoping is backend-side.
-  const restaurantGroups = useMemo(() => {
-    const byId = new Map();
-    for (const g of special) {
-      let entry = byId.get(g.restaurant_id);
-      if (!entry) {
-        entry = { restaurant_id: g.restaurant_id, restaurant_name: g.restaurant_name, bundles: [] };
-        byId.set(g.restaurant_id, entry);
-      }
-      for (const it of g.items || []) entry.bundles.push({ ...it, platform: g.platform, order_url: g.order_url });
-    }
-    return [...byId.values()];
-  }, [special]);
+  // One card per bundle; each carries its restaurant, platform and link.
+  const bundles = useMemo(() => special
+    .filter((g) => !RETIRED.has(g.platform?.name))
+    .flatMap((g) => (g.items || []).map((it) => ({ ...it, restaurant_id: g.restaurant_id, restaurant_name: g.restaurant_name, platform: g.platform, order_url: g.order_url }))),
+  [special]);
+
+  const isCodes = seg === 'kodlar';
 
   return (
-    <View style={[s.root, { paddingTop: insets.top + 4 }]}>
-      <Header title="Fırsatlar" />
-      <View style={s.segWrap}>
-        <Segmented
-          value={seg}
-          onChange={setSeg}
-          options={[{ id: 'kodlar', label: 'Kodlar' }, { id: 'menuler', label: 'Özel Menüler' }]}
-        />
-      </View>
-
+    <View style={{ flex: 1, backgroundColor: T.bg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.scroll}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.blue} />}
+        contentContainerStyle={{ paddingTop: insets.top + 4, paddingBottom: 110 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.ink} />}
       >
+        <View style={s.head}>
+          {isCodes ? <Title accent="avantaj.">Biraz daha</Title> : <Title accent="fırsat var.">Menüde</Title>}
+          <Text style={s.lead}>{isCodes ? 'Önce koşulları incele, sonra seçimini yap.' : 'Yalnızca tek bir platformda bulunan özel menüler.'}</Text>
+          <Segmented
+            style={s.seg}
+            value={seg}
+            onChange={setSeg}
+            options={[{ value: 'kodlar', label: 'Kodlar' }, { value: 'menuler', label: 'Özel menüler' }]}
+          />
+        </View>
+
         {loading ? (
-          <View style={s.center}><ActivityIndicator size="large" color={T.blue} /></View>
+          <View style={s.state}><Mascot pose="deal-search" size={110} /><Text style={s.stateTitle}>Fırsatlar yükleniyor…</Text><ActivityIndicator color={T.ink} style={{ marginTop: 10 }} /></View>
         ) : error ? (
-          <View style={s.center}>
-            <Text style={s.errText}>{error}</Text>
-            <Pressable onPress={() => load(false)} style={s.retry}><Text style={s.retryText}>Tekrar dene</Text></Pressable>
+          <View style={s.state}>
+            <Mascot pose="no-results" size={110} />
+            <Text style={s.stateTitle}>Fırsatlar şu an yüklenemedi.</Text>
+            <Text style={s.stateText}>Bağlantını kontrol edip tekrar dene.</Text>
+            <PrimaryButton onPress={() => load(false)} style={s.stateBtn}>Tekrar dene</PrimaryButton>
           </View>
-        ) : seg === 'kodlar' ? (
+        ) : isCodes ? (
           <CodesView codes={sortedCodes} openCode={openCode} />
         ) : (
-          <SpecialMenusView groups={restaurantGroups} />
+          <SpecialMenusView bundles={bundles} onCodes={() => setSeg('kodlar')} />
         )}
       </ScrollView>
     </View>
   );
 }
 
-// ── KODLAR segment — live discount codes (unchanged behaviour) ──
 function CodesView({ codes, openCode }) {
-  if (codes.length === 0) {
-    return <View style={s.center}><Text style={s.empty}>Şu an aktif kod yok</Text></View>;
-  }
   return (
-    <View style={s.segBody}>
-      <Text style={s.hint}>Süresi en yakına göre</Text>
-      {codes.map((c) => {
+    <View style={s.body}>
+      <View style={s.callout}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.calloutTitle}>Küçük kod, güzel fark.</Text>
+          <Text style={s.calloutText}>Kodun restoran ve sepet koşullarına uyduğundan emin ol.</Text>
+        </View>
+        <Mascot pose="discount-code" size={104} />
+      </View>
+
+      <Text style={s.sectionTitle}>Kodları keşfet</Text>
+      {codes.length === 0 ? (
+        <View style={s.state}>
+          <Mascot pose="no-results" size={100} />
+          <Text style={s.stateTitle}>Şu an aktif kod yok.</Text>
+          <Text style={s.stateText}>Platformlar yeni kod yayınladığında burada göreceksin.</Text>
+        </View>
+      ) : codes.map((c) => {
         const left = timeLeft(c.expiry_date);
+        const who = eligibility(c);
         return (
-          <Card key={String(c.id)} pad={15} onPress={() => openCode(c)} style={s.codeCard}>
-            <Brand brand={platformBrand(c.platform)} size={48} radius={14} />
-            <View style={s.codeMeta}>
-              <Text style={s.code} numberOfLines={1}>{c.code || c.title}</Text>
-              <Text style={s.codeSub} numberOfLines={1}>{c.platform?.name} · {discountText(c)}</Text>
-              <View style={s.pills}>
-                {c.minimum_order != null ? (
-                  <Pill bg={T.bg} fg={T.sub} textStyle={s.pillText}>Min. {money(c.minimum_order)}</Pill>
-                ) : null}
-                {left ? (
-                  <Pill bg={T.bg} fg={T.sub} textStyle={s.pillText}>
-                    <Icon name="clock" s={12} c={T.faint} />
-                    <Text style={s.pillText}>{left}</Text>
-                  </Pill>
-                ) : null}
+          <Pressable key={String(c.id)} onPress={() => openCode(c)} style={({ pressed }) => [s.codeCard, pressed && { opacity: 0.85 }]} accessibilityRole="button">
+            <View style={s.codeTop}>
+              <View style={s.codeIcon}><Icon name="tag" s={22} c={T.ink} /></View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.code} numberOfLines={2}>{c.code || c.title}</Text>
+                <Text style={s.codeSub} numberOfLines={1}>{c.platform?.name} · {discountText(c)}</Text>
               </View>
+              <Icon name="chevR" s={18} c={T.ink} sw={1.9} />
             </View>
-            <Icon name="chevR" s={19} c={T.faint} sw={2.2} />
-          </Card>
+            <View style={s.codeFoot}>
+              <Text style={s.codeFootText}>{c.minimum_order != null ? `Min. ${money(num(c.minimum_order))}` : 'Alt limit yok'}</Text>
+              <Text style={s.codeFootText} numberOfLines={1}>{[who, left].filter(Boolean).join(' · ')}</Text>
+            </View>
+          </Pressable>
         );
       })}
+      <Note>Kodlar platformların herkese açık kampanya sayfalarından okunur. Son geçerlilik her zaman platformda kontrol edilir.</Note>
     </View>
   );
 }
 
-// ── ÖZEL MENÜLER segment — platform-exclusive bundles, grouped by restaurant ──
-function SpecialMenusView({ groups }) {
+function SpecialMenusView({ bundles, onCodes }) {
   const navigation = useNavigation();
-  const [q, setQ] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [plat, setPlat] = useState('all');
-  const [cat, setCat] = useState('all');
+  const { width } = useWindowDimensions();
+  const [plat, setPlat] = useState('Tümü');
+  const plats = useMemo(() => ['Tümü', ...new Set(bundles.map((b) => b.platform?.name).filter(Boolean))], [bundles]);
+  const shown = plat === 'Tümü' ? bundles : bundles.filter((b) => b.platform?.name === plat);
 
-  // Platform chip dot colours come from live hex_color (Getir absent → no dot).
-  const platHex = useMemo(() => {
-    const m = {};
-    for (const g of groups) for (const b of g.bundles) {
-      const k = platformKey(b.platform?.name);
-      if (b.platform?.hex_color && !m[k]) m[k] = b.platform.hex_color;
-    }
-    return m;
-  }, [groups]);
-  const platformOptions = useMemo(
-    () => SM_PLATFORMS.map((o) => ({ ...o, color: o.id !== 'all' ? platHex[o.id] || null : null })),
-    [platHex],
-  );
-
-  // Kategori options built dynamically from the distinct category values that
-  // are ACTUALLY present in the live bundles — every chip maps to real data.
-  const catOptions = useMemo(() => {
-    const seen = [];
-    for (const g of groups) for (const b of g.bundles) {
-      if (b.category && !seen.includes(b.category)) seen.push(b.category);
-    }
-    return [{ id: 'all', label: 'Tüm kategoriler' }, ...seen.map((c) => ({ id: c, label: c }))];
-  }, [groups]);
-
-  const ql = q.trim().toLocaleLowerCase('tr');
-  const filtered = useMemo(() => groups.map((g) => {
-    const bundles = g.bundles.filter((b) => {
-      if (plat !== 'all' && platformKey(b.platform?.name) !== plat) return false;
-      if (cat !== 'all' && b.category !== cat) return false;
-      if (ql && !(
-        String(g.restaurant_name).toLocaleLowerCase('tr').includes(ql) ||
-        String(b.name).toLocaleLowerCase('tr').includes(ql)
-      )) return false;
-      return true;
-    });
-    return { ...g, bundles };
-  }).filter((g) => g.bundles.length > 0), [groups, plat, cat, ql]);
-
-  const activeFilters = (plat !== 'all' ? 1 : 0) + (cat !== 'all' ? 1 : 0);
-  const clearAll = () => { setQ(''); setPlat('all'); setCat('all'); };
-
-  // No live bundles at all → the honest empty state.
-  if (groups.length === 0) {
+  if (bundles.length === 0) {
     return (
-      <View style={s.emptyWrap}>
-        <Image source={require('../../assets/mascot.png')} style={s.mascot} resizeMode="contain" />
-        <Text style={s.emptyTitle}>Şu an özel menü yok</Text>
-        <Text style={s.emptyDesc}>Restoranlar platforma özel menüler eklediğinde burada göreceksin. Bu sırada kodlara göz at.</Text>
-        <Pressable onPress={() => navigation.navigate('Compare')} style={s.emptyBtn}>
-          <Text style={s.emptyBtnText}>Restoranları keşfet</Text>
-        </Pressable>
+      <View style={s.state}>
+        <Mascot pose="no-results" size={120} />
+        <Text style={s.stateTitle}>Şu an özel menü yok.</Text>
+        <Text style={s.stateText}>Restoranlar platforma özel menü eklediğinde burada göreceksin.</Text>
+        <PrimaryButton onPress={onCodes} bg={T.white} fg={T.ink} style={[s.stateBtn, s.ghost]}>Kodlara göz at</PrimaryButton>
+        <Pressable onPress={() => navigation.navigate('Compare')} style={{ marginTop: 14 }}><Text style={s.link}>Restoranları keşfet</Text></Pressable>
       </View>
     );
   }
 
-  return (
-    <View style={s.smBody}>
-      {/* search + filter toggle */}
-      <View style={s.searchRow}>
-        <View style={s.searchBox}>
-          <Icon name="search" s={19} c={T.faint} />
-          <TextInput
-            value={q}
-            onChangeText={setQ}
-            placeholder="Restoran veya menü ara…"
-            placeholderTextColor={T.faint}
-            style={s.searchInput}
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {q.length > 0 ? (
-            <Pressable hitSlop={8} onPress={() => setQ('')}><Icon name="x" s={16} c={T.faint} /></Pressable>
-          ) : null}
-        </View>
-        <Pressable
-          onPress={() => setShowFilters((v) => !v)}
-          style={[s.filterBtn, { backgroundColor: showFilters || activeFilters ? T.navy : T.white }]}
-        >
-          <Icon name="filter" s={20} c={showFilters || activeFilters ? '#fff' : T.ink} />
-          {activeFilters ? <View style={s.filterBadge} /> : null}
-        </Pressable>
-      </View>
-
-      {/* filter panel */}
-      {showFilters ? (
-        <View style={s.filterPanel}>
-          <FilterRow label="Platform" options={platformOptions} value={plat} onPick={setPlat} platform />
-          <View style={{ height: 12 }} />
-          <FilterRow label="Kategori" options={catOptions} value={cat} onPick={setCat} />
-        </View>
-      ) : null}
-
-      <Text style={s.smIntro}>
-        Yalnızca tek bir platformda bulunan özel menüler. <Text style={s.smIntroFaint}>Nereden alacağını rozet gösterir.</Text>
-      </Text>
-
-      {filtered.length === 0 ? (
-        <View style={s.noResult}>
-          <Text style={s.noResultTitle}>Sonuç bulunamadı</Text>
-          <Text style={s.noResultSub}>Arama veya filtreleri değiştirmeyi dene.</Text>
-          <Pressable onPress={clearAll} style={s.clearBtn}><Text style={s.clearBtnText}>Filtreleri temizle</Text></Pressable>
-        </View>
-      ) : (
-        <View style={{ gap: 26 }}>
-          {filtered.map((g) => {
-            const tile = restaurantTile({ name: g.restaurant_name });
-            const food = tile.food;
-            return (
-              <View key={String(g.restaurant_id)}>
-                <View style={s.groupHead}>
-                  <View style={[s.groupTile, { backgroundColor: tile.bg }]}><Food name={food} s={22} /></View>
-                  <Text style={s.groupName} numberOfLines={1}>{g.restaurant_name}</Text>
-                  <Text style={s.groupCount}>{g.bundles.length} özel menü</Text>
-                </View>
-                <View style={{ gap: 12 }}>
-                  {g.bundles.map((b) => <BundleCard key={String(b.id)} bundle={b} food={food} />)}
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function FilterRow({ label, options, value, onPick, platform }) {
+  const artW = width - 40 - 34;
   return (
     <View>
-      <Text style={s.filterLabel}>{label}</Text>
-      <View style={s.chipWrap}>
-        {options.map((o) => {
-          const on = value === o.id;
-          const dot = platform && o.id !== 'all' ? o.color : null;
-          return (
-            <Pressable key={o.id} onPress={() => onPick(o.id)} style={[s.chip, on && s.chipOn]}>
-              {dot ? <View style={[s.chipDot, { backgroundColor: dot }]} /> : null}
-              <Text style={[s.chipText, on ? s.chipTextOn : s.chipTextOff]} numberOfLines={1}>{o.label}</Text>
-            </Pressable>
-          );
-        })}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+        {plats.map((p) => <Chip key={p} label={p} active={plat === p} onPress={() => setPlat(p)} />)}
+      </ScrollView>
+      <View style={s.body}>
+        {shown.map((b) => <BundleCard key={`${b.platform?.id}-${b.id}`} b={b} artW={artW} />)}
+        <Note>Fiyatlar platformun herkese açık sayfasında son görülen fiyattır. Teslimat ücreti hariç.</Note>
       </View>
     </View>
   );
 }
 
-function BundleCard({ bundle, food }) {
-  const b = platformBrand(bundle.platform);
-  const url = safeOrderURL(bundle.order_url);
-  const openApp = async () => {
+function BundleCard({ b, artW }) {
+  const url = safeOrderURL(b.order_url);
+  const elsewhere = (b.elsewhere || []).filter((e) => !RETIRED.has(e.platform?.name));
+  const cheaperBy = elsewhere.length ? Math.min(...elsewhere.map((e) => num(e.price))) - num(b.price) : 0;
+  const open = async () => {
     try { await Linking.openURL(url); }
     catch { Alert.alert('Bağlantı açılamadı', 'Lütfen platformu kendi uygulamasından aç.'); }
   };
   return (
-    <Card pad={0} style={s.bundleCard}>
-      <View style={s.bundleBody}>
-        {/* platform badge + plain price (no comparison, no savings) */}
-        <View style={s.bundleTop}>
-          <PlatformBadge platform={bundle.platform} />
-          <Text style={s.bundlePrice}>{money(bundle.price)}</Text>
+    <View style={s.bundle}>
+      <FoodArt type={foodType(`${b.name} ${b.restaurant_name}`)} size={artW} height={Math.round(artW * 0.42)} round={false} radius={16} />
+      <Text style={s.bundleEyebrow} numberOfLines={1}>{String(b.restaurant_name).toLocaleUpperCase('tr-TR')} · ÖZEL MENÜ</Text>
+      <View style={s.bundleRow}>
+        <Text style={s.bundleName}>{b.name}</Text>
+        <Text style={s.bundlePrice}>{money(num(b.price))}</Text>
+      </View>
+      <Text style={s.bundleSub}>{b.platform?.name} özel menüsü</Text>
+
+      {elsewhere.length ? (
+        <View style={s.elsewhere}>
+          <Text style={s.elsewhereTitle}>Aynı menü diğer platformlarda</Text>
+          {elsewhere.map((e) => (
+            <View key={String(e.platform?.id)} style={s.elsewhereRow}>
+              <Text style={s.elsewhereName}>{e.platform?.name}</Text>
+              <Text style={s.elsewherePrice}>{money(num(e.price))}</Text>
+            </View>
+          ))}
+          {cheaperBy > 0 ? <Text style={s.cheaper}>Burada {money(Math.round(cheaperBy * 100) / 100)} daha ucuz</Text> : null}
         </View>
-        <View style={s.bundleNameRow}>
-          <View style={s.bundleFoodTile}><Food name={food} s={34} /></View>
-          <Text style={s.bundleName}>{bundle.name}</Text>
-        </View>
-        {/* opens the backend's verified link for this platform (restaurant page
-            where we scrape it, else the platform's entry page); hidden when none */}
+      ) : null}
+
+      <View style={s.bundleFoot}>
+        <Text style={s.bundleFootText}>Bu menü yalnızca {b.platform?.name}'de</Text>
         {url ? (
-          <View style={s.goRow}>
-            <Pressable style={({ pressed }) => [s.goBtn, pressed && { opacity: 0.85 }]} onPress={openApp}>
-              <Text style={s.goBtnText}>Uygulamaya git</Text>
-              <Icon name="chevR" s={13} c="#fff" sw={2.6} />
-            </Pressable>
-          </View>
+          <Pressable onPress={open} style={s.goRow} accessibilityRole="link" hitSlop={6}>
+            <Text style={s.goText}>Platformda incele</Text>
+            <Icon name="arrow" s={17} c={T.ink} />
+          </Pressable>
         ) : null}
       </View>
-      {/* exclusivity footer */}
-      <View style={s.bundleFooter}>
-        <View style={[s.checkDot, { backgroundColor: b.bg }]}><Icon name="check" s={11} c="#fff" sw={3.2} /></View>
-        <Text style={s.footerText}>Yalnızca <Text style={[s.footerStrong, { color: b.bg }]}>{bundle.platform?.name}</Text>'de</Text>
-      </View>
-    </Card>
-  );
-}
-
-// prominent platform badge — colour + label come straight from the live platform
-function PlatformBadge({ platform }) {
-  const b = platformBrand(platform);
-  return (
-    <View style={[s.platBadge, { backgroundColor: b.bg }]}>
-      <View style={s.platShort}><Text style={[s.platShortText, { color: b.fg }]}>{b.short}</Text></View>
-      <Text style={[s.platName, { color: b.fg }]} numberOfLines={1}>{platform?.name}</Text>
     </View>
   );
 }
 
-// ── segmented control ──
-function Segmented({ value, onChange, options }) {
+function Note({ children }) {
   return (
-    <View style={s.seg}>
-      {options.map((o) => {
-        const on = value === o.id;
-        return (
-          <Pressable key={o.id} onPress={() => onChange(o.id)} style={[s.segBtn, on && s.segBtnOn]}>
-            <Text style={[s.segLabel, on ? s.segLabelOn : s.segLabelOff]}>{o.label}</Text>
-          </Pressable>
-        );
-      })}
+    <View style={s.note}>
+      <Icon name="help" s={15} c={T.sub} />
+      <Text style={s.noteText}>{children}</Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: T.bg },
-  scroll:    { paddingBottom: 110 },
-  segWrap:   { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 4 },
-  segBody:   { paddingHorizontal: 20, paddingTop: 12 },
-  smBody:    { paddingHorizontal: 20, paddingTop: 12 },
+  head:        { paddingHorizontal: 20, paddingTop: 10 },
+  lead:        { fontSize: 14, fontFamily: font.regular, color: T.sub, marginTop: 8 },
+  seg:         { marginTop: 20 },
+  chips:       { paddingHorizontal: 20, paddingTop: 16, gap: 8 },
+  body:        { paddingHorizontal: 20, paddingTop: 16 },
 
-  // segmented
-  seg:        { flexDirection: 'row', backgroundColor: T.white, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: T.line2 },
-  segBtn:     { flex: 1, paddingVertical: 11, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  segBtnOn:   { backgroundColor: T.navy },
-  segLabel:   { fontSize: 14, fontFamily: font.extrabold, letterSpacing: -0.14 },
-  segLabelOn: { color: '#fff' },
-  segLabelOff:{ color: T.sub },
+  callout:      { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#EAE8E0', borderRadius: 20, padding: 18 },
+  calloutTitle: { fontSize: 18, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5 },
+  calloutText:  { fontSize: 13, fontFamily: font.regular, color: T.sub, marginTop: 6, lineHeight: 18 },
+  sectionTitle: { fontSize: 19, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5, marginTop: 26, marginBottom: 14 },
 
-  // codes
-  hint:      { fontSize: 12.5, fontFamily: font.bold, color: T.faint, marginBottom: 12, paddingLeft: 2 },
-  codeCard:  { flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 12 },
-  codeMeta:  { flex: 1, minWidth: 0 },
-  code:      { fontSize: 15, fontFamily: font.extrabold, color: T.ink, letterSpacing: 0.3 },
-  codeSub:   { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 2 },
-  pills:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 9 },
-  pillText:  { fontSize: 11, fontFamily: font.bold, color: T.sub },
+  codeCard:     { backgroundColor: T.white, borderRadius: 18, borderWidth: 1, borderColor: T.line, marginBottom: 12, overflow: 'hidden' },
+  codeTop:      { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
+  codeIcon:     { width: 44, height: 44, borderRadius: 13, backgroundColor: '#FFF0C5', alignItems: 'center', justifyContent: 'center' },
+  code:         { fontSize: 17, fontFamily: font.bold, color: T.ink, letterSpacing: 0.2 },
+  codeSub:      { fontSize: 12.5, fontFamily: font.regular, color: T.sub, marginTop: 3 },
+  codeFoot:     { flexDirection: 'row', justifyContent: 'space-between', gap: 10, paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: 1, borderTopColor: T.line, borderStyle: 'dashed' },
+  codeFootText: { fontSize: 12, fontFamily: font.regular, color: T.sub, flexShrink: 1 },
 
-  // search + filter
-  searchRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  searchBox:   { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: T.white, borderRadius: 14, paddingHorizontal: 14, borderWidth: 1, borderColor: T.line2 },
-  searchInput: { flex: 1, fontFamily: font.semibold, fontSize: 14, color: T.ink, paddingVertical: 13 },
-  filterBtn:   { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  filterBadge: { position: 'absolute', top: 8, right: 8, width: 9, height: 9, borderRadius: 999, backgroundColor: T.coral, borderWidth: 2, borderColor: T.white },
+  bundle:        { backgroundColor: T.white, borderRadius: 20, borderWidth: 1, borderColor: T.line, padding: 16, marginBottom: 14 },
+  bundleEyebrow: { fontSize: 10, fontFamily: font.semibold, color: T.sub, letterSpacing: 1.6, marginTop: 16 },
+  bundleRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginTop: 6 },
+  bundleName:    { flex: 1, fontSize: 17, fontFamily: font.bold, color: T.ink, letterSpacing: -0.4, lineHeight: 22 },
+  bundlePrice:   { fontSize: 22, fontFamily: font.bold, color: T.ink, letterSpacing: -0.6 },
+  bundleSub:     { fontSize: 13, fontFamily: font.regular, color: T.sub, marginTop: 4 },
+  elsewhere:     { backgroundColor: '#F0EFE8', borderRadius: 14, padding: 14, marginTop: 14, gap: 8 },
+  elsewhereTitle:{ fontSize: 13, fontFamily: font.semibold, color: T.ink },
+  elsewhereRow:  { flexDirection: 'row', justifyContent: 'space-between' },
+  elsewhereName: { fontSize: 13, fontFamily: font.regular, color: T.ink },
+  elsewherePrice:{ fontSize: 13, fontFamily: font.semibold, color: T.ink },
+  cheaper:       { fontSize: 13, fontFamily: font.medium, color: T.green },
+  bundleFoot:    { borderTopWidth: 1, borderTopColor: T.line, marginTop: 14, paddingTop: 12, gap: 8 },
+  bundleFootText:{ fontSize: 11.5, fontFamily: font.regular, color: T.sub },
+  goRow:         { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  goText:        { fontSize: 14, fontFamily: font.medium, color: T.ink },
 
-  filterPanel: { marginTop: 12, backgroundColor: T.white, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: T.line },
-  filterLabel: { fontSize: 11, fontFamily: font.extrabold, letterSpacing: 1.3, textTransform: 'uppercase', color: T.faint, marginBottom: 9 },
-  chipWrap:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip:        { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8, paddingHorizontal: 13, borderRadius: 999, backgroundColor: T.bg },
-  chipOn:      { backgroundColor: T.navy },
-  chipDot:     { width: 9, height: 9, borderRadius: 999 },
-  chipText:    { fontSize: 13, fontFamily: font.bold },
-  chipTextOn:  { color: '#fff' },
-  chipTextOff: { color: T.sub },
+  state:       { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20 },
+  stateTitle:  { fontSize: 19, fontFamily: font.medium, color: T.ink, marginTop: 14, textAlign: 'center', letterSpacing: -0.4 },
+  stateText:   { fontSize: 13.5, fontFamily: font.regular, color: T.sub, marginTop: 6, textAlign: 'center' },
+  stateBtn:    { marginTop: 18, width: 'auto', paddingHorizontal: 26 },
+  ghost:       { borderWidth: 1, borderColor: T.line },
+  link:        { fontSize: 13.5, fontFamily: font.medium, color: T.ink, textDecorationLine: 'underline' },
 
-  smIntro:      { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginVertical: 16, paddingLeft: 2, lineHeight: 18 },
-  smIntroFaint: { color: T.faint },
-
-  // restaurant group
-  groupHead:  { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 12, paddingLeft: 2 },
-  groupTile:  { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  groupName:  { fontSize: 16, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.16, flexShrink: 1 },
-  groupCount: { fontSize: 12, fontFamily: font.bold, color: T.faint, marginLeft: 'auto' },
-
-  // bundle card
-  bundleCard:     { padding: 0, overflow: 'hidden' },
-  bundleBody:     { paddingHorizontal: 16, paddingTop: 15, paddingBottom: 14 },
-  bundleTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  bundlePrice:    { fontSize: 21, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.4 },
-  bundleNameRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 13 },
-  bundleFoodTile: { width: 46, height: 46, borderRadius: 13, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' },
-  bundleName:     { flex: 1, minWidth: 0, fontSize: 14.5, fontFamily: font.bold, color: T.ink, lineHeight: 19, letterSpacing: -0.14, paddingTop: 2 },
-  goRow:          { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 13 },
-  goBtn:          { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: T.navy, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 15 },
-  goBtnText:      { fontSize: 13, fontFamily: font.extrabold, color: '#fff', letterSpacing: -0.13 },
-  bundleFooter:   { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: T.bg, borderTopWidth: 1, borderTopColor: T.line },
-  checkDot:       { width: 18, height: 18, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  footerText:     { fontSize: 12, fontFamily: font.bold, color: T.sub },
-  footerStrong:   { fontFamily: font.extrabold },
-
-  // platform badge
-  platBadge:     { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 10, paddingVertical: 7, paddingLeft: 8, paddingRight: 12, alignSelf: 'flex-start', flexShrink: 1 },
-  platShort:     { width: 20, height: 20, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
-  platShortText: { fontSize: 10, fontFamily: font.extrabold },
-  platName:      { fontSize: 13, fontFamily: font.extrabold, letterSpacing: -0.13, flexShrink: 1 },
-
-  // states
-  center:    { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  empty:     { fontSize: 14, fontFamily: font.semibold, color: T.faint },
-  errText:   { fontSize: 14, fontFamily: font.semibold, color: T.coral, textAlign: 'center' },
-  retry:     { marginTop: 14, paddingVertical: 10, paddingHorizontal: 22 },
-  retryText: { fontSize: 14, fontFamily: font.bold, color: T.blue },
-
-  noResult:      { paddingTop: 36, alignItems: 'center' },
-  noResultTitle: { fontSize: 15, fontFamily: font.extrabold, color: T.ink },
-  noResultSub:   { fontSize: 13, fontFamily: font.semibold, color: T.sub, marginTop: 6 },
-  clearBtn:      { marginTop: 16, backgroundColor: T.blueSoft, paddingVertical: 11, paddingHorizontal: 18, borderRadius: 12 },
-  clearBtnText:  { fontSize: 13.5, fontFamily: font.extrabold, color: T.blue },
-
-  emptyWrap:    { paddingTop: 56, paddingHorizontal: 36, alignItems: 'center' },
-  mascot:       { width: 104, height: 104, marginBottom: 22 },
-  emptyTitle:   { fontSize: 18, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.18 },
-  emptyDesc:    { fontSize: 13.5, fontFamily: font.semibold, color: T.sub, marginTop: 8, lineHeight: 20, textAlign: 'center', maxWidth: 250 },
-  emptyBtn:     { marginTop: 22, backgroundColor: T.blueSoft, paddingVertical: 13, paddingHorizontal: 22, borderRadius: 14 },
-  emptyBtnText: { fontSize: 14, fontFamily: font.extrabold, color: T.blue },
+  note:        { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 8 },
+  noteText:    { flex: 1, fontSize: 12, fontFamily: font.regular, color: T.sub, lineHeight: 17 },
 });

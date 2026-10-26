@@ -1,260 +1,202 @@
-// BudgetScreen — "Tasarruf": what the user saved with Pryce (D-030).
-// Every number comes from orders the user CONFIRMED in the return popup
-// (OrderCheck), stored on this phone only. Saved = average of the other
-// complete platforms minus what they paid (D-031); nothing is invented.
+// BudgetScreen — "Tasarruf" (redesign PR 4, designs 14/21): what the user
+// saved with Doybi (D-030). Every number comes from orders the user CONFIRMED
+// in the return popup (OrderCheck), stored on this phone only. Saved = average
+// of the other complete platforms minus what they paid (D-031). With no
+// confirmed order the screen says so; an estimate is never shown as a saving.
 import { useState, useCallback } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
-import { T, font, money } from '../theme/tokens';
-import { Screen, Card, Header, SectionHead } from '../components/ui';
-import { Icon, Spark } from '../components/icons';
-import Food from '../components/Food';
-import { restaurantTile } from '../lib/brand';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { T, font, money, serif } from '../theme/tokens';
+import { Screen, Title, PrimaryButton } from '../components/ui';
+import { Icon } from '../components/icons';
+import { FoodArt, Mascot, foodType } from '../components/Art';
 import { loadOrders } from '../lib/orders';
 import { summarize, itemsLine } from '../lib/savings';
 
-const mascot = require('../../assets/mascot.png');
 const SRC = [
-  { id: 'price', label: 'Platformlar arası fiyat farkı', color: '#3D5AF1' },
-  { id: 'code',  label: 'Otomatik uygulanan kodlar',     color: '#F5A524' },
+  { id: 'price', label: 'Platformlar arası fiyat farkı', color: T.green },
+  { id: 'code',  label: 'Otomatik uygulanan kodlar',     color: T.yellow },
 ];
 const dateTR = (t) => new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+const tl = (n) => money(Math.round(n * 100) / 100);
 
-// trend line geometry (viewBox units)
-const W = 300, H = 96;
+const W = 300, H = 110, MAX_POINTS = 8;
 
 export default function BudgetScreen({ navigation }) {
   const [orders, setOrders] = useState(null);
   useFocusEffect(useCallback(() => { loadOrders().then(setOrders); }, []));
-  if (orders === null) return <Screen><Header title="Tasarruf" /></Screen>;
+  if (orders === null) return <Screen />;
   const sv = summarize(orders, Date.now());
   if (!sv.count) return <EmptyBudget navigation={navigation} />;
-  const maxV = Math.max(1, ...sv.trend.map((t) => t.v));
+
+  // Cumulative saving over the last confirmed orders (oldest -> newest).
+  const last = orders.slice().sort((a, b) => a.at - b.at).slice(-MAX_POINTS);
+  const before = sv.total - last.reduce((a, o) => a + o.saved, 0);
+  const cum = [before];
+  for (const o of last) cum.push(cum[cum.length - 1] + o.saved);
+  const lo = Math.min(...cum), hi = Math.max(...cum), span = Math.max(1, hi - lo);
+  const pts = cum.map((v, i) => [(i / (cum.length - 1)) * W, H - 8 - ((v - lo) / span) * (H - 20)]);
+  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const area = `${line} L${W} ${H} L0 ${H} Z`;
+
   const sources = SRC.map((x) => ({ ...x, amt: sv.sources[x.id] })).filter((x) => x.amt > 0);
   const sourceTotal = sources.reduce((a, b) => a + b.amt, 0);
-  const n = sv.trend.length;
-  const pts = sv.trend.map((t, i) => [(i / (n - 1)) * W, H - (t.v / maxV) * (H - 14) - 6]);
-  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-  const area = `M0 ${H} L${pts.map((p) => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L')} L${W} ${H} Z`;
 
   return (
     <Screen>
-      <Header title="Tasarruf" onBell={() => navigation.navigate('Deals')} />
-
-      {/* hero — saved this month */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
-        <LinearGradient colors={['#0C2C5C', '#061B3A']} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={s.hero}>
-          <Spark s={15} style={{ position: 'absolute', left: '56%', top: '20%' }} />
-          <Spark s={10} o={0.7} style={{ position: 'absolute', left: '78%', top: '44%' }} />
-          <Spark s={11} o={0.6} style={{ position: 'absolute', left: '66%', top: '70%' }} />
-          <Image source={mascot} style={s.heroMascot} resizeMode="contain" />
-          <View style={{ maxWidth: '72%' }}>
-            <View style={s.heroEyebrow}>
-              <Icon name="spark" s={14} c={T.amber} sw={0} />
-              <Text style={s.heroEyebrowText}>{sv.month} ayında Doybi ile</Text>
-            </View>
-            <View style={s.heroAmountRow}>
-              <Text style={s.heroTL}>₺</Text>
-              <Text style={s.heroAmount}>{Number(sv.thisMonth).toLocaleString('tr-TR')}</Text>
-            </View>
-            <Text style={s.heroSub}>diğer platformların ortalamasına göre daha az ödedin</Text>
-            <View style={s.heroBadge}>
-              <Icon name="check" s={13} c="#5FE0A0" sw={3} />
-              <Text style={s.heroBadgeText}>{sv.count} onaylı sipariş</Text>
-            </View>
-          </View>
-        </LinearGradient>
+      <View style={s.head}>
+        <Title accent="birikir.">İyi seçimler</Title>
+        <Text style={s.lead}>Onayladığın siparişlerin özeti. Yalnızca bu telefonda tutulur.</Text>
       </View>
 
-      {/* stat tiles */}
-      <View style={s.tileRow}>
-        {[
-          { n: money(sv.total),       label: 'Toplam\ntasarruf', c: T.green },
-          { n: sv.cheapestRate == null ? '—' : '%' + sv.cheapestRate, label: 'En ucuzdan\nsipariş', c: T.blue },
-          { n: money(sv.avgPerOrder), label: 'Sipariş\nbaşına',  c: T.gold },
-        ].map((t, i) => (
-          <Card key={String(i)} pad={13} style={s.tile}>
-            <Text style={[s.tileN, { color: t.c }]}>{t.n}</Text>
-            <Text style={s.tileLabel}>{t.label}</Text>
-          </Card>
+      <View style={s.hero}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.heroEyebrow}>TOPLAM TASARRUF</Text>
+          <Text style={s.heroAmount} adjustsFontSizeToFit numberOfLines={1}>{tl(sv.total)}</Text>
+          <Text style={s.heroAccent}>Az az, güzel bir fark.</Text>
+          <Text style={s.heroSub}>Diğer platformların ortalamasına göre.</Text>
+        </View>
+        <Mascot pose="savings-success" size={128} />
+      </View>
+
+      <View style={s.tiles}>
+        <Tile n={String(sv.count)} label={'Onaylanan\nsipariş'} />
+        <Tile n={tl(sv.avgPerOrder)} label={'Sipariş başına\nortalama'} />
+        <Tile n={tl(sv.thisMonth)} label={`${sv.month}\ntasarrufu`} />
+      </View>
+
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Tasarrufun gelişimi</Text>
+        <View style={s.card}>
+          <View style={s.cardHead}>
+            <Text style={s.eyebrow}>SON {last.length} SİPARİŞ</Text>
+            <View style={s.pill}><Text style={s.pillText}>Birikimli</Text></View>
+          </View>
+          <Svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+            {[0.25, 0.6].map((f) => <Line key={f} x1="0" x2={W} y1={H * f} y2={H * f} stroke={T.line} strokeWidth={1} />)}
+            <Path d={area} fill={T.sage} />
+            <Path d={line} fill="none" stroke={T.green} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+            <Circle cx={pts[pts.length - 1][0] - 4} cy={pts[pts.length - 1][1]} r={4.5} fill={T.green} />
+          </Svg>
+          <View style={s.axis}>
+            <Text style={s.axisText}>{before > 0 ? 'Önce' : 'Başlangıç'}</Text>
+            <Text style={s.axisText}>{dateTR(last[last.length - 1].at)}</Text>
+          </View>
+          {sv.cheapestRate != null ? (
+            <Text style={s.cardNote}>Karşılaştırdığın siparişlerin %{sv.cheapestRate}'ini en uygun platformdan verdin.</Text>
+          ) : null}
+        </View>
+      </View>
+
+      {sourceTotal > 0 ? (
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Tasarruf nereden geldi?</Text>
+          <View style={s.card}>
+            <View style={s.stackBar}>
+              {sources.map((src) => <View key={src.id} style={{ flex: src.amt / sourceTotal, backgroundColor: src.color }} />)}
+            </View>
+            <View style={{ marginTop: 14, gap: 11 }}>
+              {sources.map((src) => (
+                <View key={src.id} style={s.srcRow}>
+                  <View style={[s.srcDot, { backgroundColor: src.color }]} />
+                  <Text style={s.srcLabel}>{src.label}</Text>
+                  <Text style={s.srcAmt}>{tl(src.amt)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Son siparişler</Text>
+        {sv.recent.map((r) => (
+          <View key={r.id} style={s.recentRow}>
+            <FoodArt type={foodType(`${r.restaurant.name} ${itemsLine(r.items)}`)} size={50} round={false} radius={12} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.recentName} numberOfLines={1}>{r.restaurant.name}</Text>
+              <Text style={s.recentSub} numberOfLines={1}>{r.platform.name} · {dateTR(r.at)} · {tl(r.paid)}</Text>
+            </View>
+            <Text style={[s.recentSaved, r.saved <= 0 && { color: T.sub }]}>{r.saved > 0 ? `−${tl(r.saved)}` : '—'}</Text>
+          </View>
         ))}
       </View>
 
-      {/* savings trend */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
-        <Card>
-          <View style={s.trendHead}>
-            <Text style={s.cardTitle}>Tasarruf trendi</Text>
-          </View>
-          <Text style={s.cardSub}>Son 6 ay · aylık tasarruf</Text>
-          <View>
-            <Svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
-              <Defs>
-                <SvgGradient id="savg" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={T.green} stopOpacity="0.22" />
-                  <Stop offset="1" stopColor={T.green} stopOpacity="0" />
-                </SvgGradient>
-              </Defs>
-              <Path d={area} fill="url(#savg)" />
-              <Path d={line} fill="none" stroke={T.green} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-              {pts.map((p, i) => {
-                const last = i === pts.length - 1;
-                return (
-                  <Circle
-                    key={String(i)}
-                    cx={p[0]} cy={p[1]} r={last ? 5.5 : 3.5}
-                    fill={last ? T.green : '#fff'}
-                    stroke={T.green} strokeWidth={last ? 3 : 2.4}
-                  />
-                );
-              })}
-            </Svg>
-            <View style={s.trendTag}><Text style={s.trendTagText}>{money(sv.thisMonth)}</Text></View>
-          </View>
-          <View style={s.trendMonths}>
-            {sv.trend.map((t, i) => (
-              <Text key={t.m} style={[s.trendMonth, i === sv.trend.length - 1 && { color: T.ink }]}>{t.m}</Text>
-            ))}
-          </View>
-        </Card>
-      </View>
-
-      {/* where savings came from */}
-      {sourceTotal > 0 ? <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
-        <Card>
-          <Text style={s.cardTitle}>Tasarruf nereden geldi?</Text>
-          <Text style={s.cardSub}>Tüm siparişler · {money(sv.total)}</Text>
-          <View style={s.stackBar}>
-            {sources.map((src) => (
-              <View key={src.id} style={{ flex: src.amt / sourceTotal, backgroundColor: src.color, borderRadius: 4 }} />
-            ))}
-          </View>
-          <View style={{ marginTop: 14, gap: 11 }}>
-            {sources.map((src) => (
-              <View key={src.id} style={s.srcRow}>
-                <View style={[s.srcDot, { backgroundColor: src.color }]} />
-                <Text style={s.srcLabel}>{src.label}</Text>
-                <Text style={s.srcAmt}>{money(src.amt)}</Text>
-              </View>
-            ))}
-          </View>
-        </Card>
-      </View> : null}
-
-      {/* recent savings */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-        <SectionHead title="Son tasarruflar" />
-        <Card pad={0}>
-          {sv.recent.map((r, i) => {
-            const tile = restaurantTile({ name: r.restaurant.name });
-            return (
-              <View key={r.id} style={[s.recentRow, i ? s.recentBorder : null]}>
-                <View style={[s.recentTile, { backgroundColor: tile.bg }]}><Food name={tile.food} s={26} /></View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.recentName} numberOfLines={1}>{itemsLine(r.items)}</Text>
-                  <Text style={s.recentSub} numberOfLines={1}>{r.restaurant.name} · {r.platform.name} · {dateTR(r.at)}</Text>
-                </View>
-                <View style={s.recentSaved}>
-                  <Icon name="minus" s={13} c={T.green} sw={3} />
-                  <Text style={s.recentSavedText}>{money(r.saved)}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </Card>
-      </View>
-
-      {/* CTA */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
-        <Card onPress={() => navigation.navigate('Compare')} style={s.cta}>
-          <View style={s.ctaIcon}><Icon name="search" s={22} c={T.blue} /></View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.ctaTitle}>Tasarrufa devam et</Text>
-            <Text style={s.ctaSub}>Yeni bir sipariş karşılaştır</Text>
-          </View>
-          <Icon name="chevR" s={19} c={T.blue} sw={2.2} />
-        </Card>
+      <View style={s.section}>
+        <PrimaryButton onPress={() => navigation.navigate('Compare')}>Yeni bir sepet karşılaştır</PrimaryButton>
       </View>
     </Screen>
+  );
+}
+
+function Tile({ n, label }) {
+  return (
+    <View style={s.tile}>
+      <Text style={s.tileN} adjustsFontSizeToFit numberOfLines={1}>{n}</Text>
+      <Text style={s.tileLabel}>{label}</Text>
+    </View>
   );
 }
 
 function EmptyBudget({ navigation }) {
   return (
     <Screen>
-      <Header title="Tasarruf" />
-      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
-        <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
-          <Image source={mascot} style={{ width: 96, height: 96 }} resizeMode="contain" />
-          <Text style={[s.cardTitle, { marginTop: 10 }]}>Henüz onaylı sipariş yok</Text>
-          <Text style={[s.cardSub, { textAlign: 'center', marginBottom: 0 }]}>
-            Karşılaştır, platformu aç, siparişini ver. Döndüğünde onaylarsan tasarrufun burada görünür.
-          </Text>
-        </Card>
-      </View>
-      <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
-        <Card onPress={() => navigation.navigate('Compare')} style={s.cta}>
-          <View style={s.ctaIcon}><Icon name="search" s={22} c={T.blue} /></View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.ctaTitle}>İlk karşılaştırmanı yap</Text>
-            <Text style={s.ctaSub}>Sepetini oluştur, en ucuz platformu gör</Text>
-          </View>
-          <Icon name="chevR" s={19} c={T.blue} sw={2.2} />
-        </Card>
+      <View style={s.empty}>
+        <Mascot pose="empty-basket" size={190} />
+        <Title accent="senden gelsin." style={s.emptyTitle}>İlk güzel fark</Title>
+        <Text style={s.emptyText}>Siparişini tamamlayıp ödediğin tutarı onayladığında tasarrufun burada birikir.</Text>
+        <PrimaryButton onPress={() => navigation.navigate('Compare')} style={s.emptyBtn}>Karşılaştırmaya başla</PrimaryButton>
+        <View style={s.note}>
+          <Icon name="help" s={15} c={T.sub} />
+          <Text style={s.noteText}>Henüz onaylanmış sipariş yok. Tahmini tasarrufu gerçekleşmiş gibi göstermiyoruz.</Text>
+        </View>
       </View>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  hero:        { borderRadius: 24, paddingVertical: 22, paddingHorizontal: 20, overflow: 'hidden' },
-  heroMascot:  { position: 'absolute', right: -14, bottom: -16, width: 122, height: 122 },
-  heroEyebrow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroEyebrowText: { fontSize: 12.5, fontFamily: font.bold, color: 'rgba(255,255,255,0.82)' },
-  heroAmountRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, marginTop: 10 },
-  heroTL:      { fontSize: 13, fontFamily: font.bold, color: T.amber, marginBottom: 8 },
-  heroAmount:  { fontSize: 46, fontFamily: font.extrabold, color: '#fff', letterSpacing: -1.4, lineHeight: 48 },
-  heroSub:     { fontSize: 14, fontFamily: font.bold, color: 'rgba(255,255,255,0.72)', marginTop: 6 },
-  heroBadge:   {
-    marginTop: 14, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(43,174,102,0.18)', borderWidth: 1, borderColor: 'rgba(43,174,102,0.35)',
-    borderRadius: 10, paddingVertical: 6, paddingHorizontal: 11,
-  },
-  heroBadgeText: { fontSize: 11.5, fontFamily: font.extrabold, color: '#7BE9B0' },
+  head:        { paddingHorizontal: 20, paddingTop: 10 },
+  lead:        { fontSize: 14, fontFamily: font.regular, color: T.sub, marginTop: 8 },
 
-  tileRow:   { paddingHorizontal: 20, paddingTop: 14, flexDirection: 'row', gap: 11 },
-  tile:      { flex: 1, gap: 6 },
-  tileN:     { fontSize: 21, fontFamily: font.extrabold, letterSpacing: -0.4 },
-  tileLabel: { fontSize: 11, fontFamily: font.semibold, color: T.sub, lineHeight: 14 },
+  hero:        { marginHorizontal: 20, marginTop: 20, backgroundColor: T.navy, borderRadius: 24, padding: 22, flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden' },
+  heroEyebrow: { fontSize: 10, fontFamily: font.semibold, color: 'rgba(255,255,255,0.75)', letterSpacing: 1.8 },
+  heroAmount:  { fontSize: 40, fontFamily: font.medium, color: '#fff', letterSpacing: -1.6, marginTop: 12 },
+  heroAccent:  { fontSize: 17, fontFamily: serif, fontStyle: 'italic', color: T.yellow, marginTop: 4 },
+  heroSub:     { fontSize: 12, fontFamily: font.regular, color: 'rgba(255,255,255,0.8)', marginTop: 8 },
 
-  cardTitle: { fontSize: 15, fontFamily: font.extrabold, color: T.ink },
-  cardSub:   { fontSize: 12, fontFamily: font.semibold, color: T.sub, marginTop: 3, marginBottom: 14 },
+  tiles:       { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 14 },
+  tile:        { flex: 1, backgroundColor: T.white, borderRadius: 16, borderWidth: 1, borderColor: T.line, padding: 12 },
+  tileN:       { fontSize: 18, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5 },
+  tileLabel:   { fontSize: 11.5, fontFamily: font.regular, color: T.sub, marginTop: 6, lineHeight: 15 },
 
-  trendHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  trendPillText: { fontSize: 11, fontFamily: font.bold },
-  trendTag:  { position: 'absolute', right: 0, top: -6, backgroundColor: T.navy, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8 },
-  trendTagText: { fontSize: 11.5, fontFamily: font.extrabold, color: '#fff' },
-  trendMonths: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-  trendMonth:  { fontSize: 10.5, fontFamily: font.bold, color: T.faint },
+  section:     { paddingHorizontal: 20, marginTop: 24 },
+  sectionTitle:{ fontSize: 19, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5, marginBottom: 12 },
+  card:        { backgroundColor: T.white, borderRadius: 20, borderWidth: 1, borderColor: T.line, padding: 16 },
+  cardHead:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  eyebrow:     { fontSize: 10, fontFamily: font.semibold, color: T.sub, letterSpacing: 1.6 },
+  pill:        { backgroundColor: '#EFEEE7', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
+  pillText:    { fontSize: 11.5, fontFamily: font.regular, color: T.sub },
+  axis:        { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  axisText:    { fontSize: 11.5, fontFamily: font.regular, color: T.sub },
+  cardNote:    { fontSize: 12.5, fontFamily: font.regular, color: T.ink, marginTop: 12 },
 
-  stackBar: { flexDirection: 'row', height: 12, borderRadius: 999, overflow: 'hidden', gap: 3 },
-  srcRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  srcDot:   { width: 10, height: 10, borderRadius: 999 },
-  srcLabel: { flex: 1, fontSize: 13.5, fontFamily: font.semibold, color: T.ink },
-  srcAmt:   { fontSize: 13.5, fontFamily: font.extrabold, color: T.ink },
+  stackBar:    { flexDirection: 'row', height: 12, borderRadius: 999, overflow: 'hidden', gap: 3 },
+  srcRow:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  srcDot:      { width: 10, height: 10, borderRadius: 5 },
+  srcLabel:    { flex: 1, fontSize: 13.5, fontFamily: font.regular, color: T.ink },
+  srcAmt:      { fontSize: 13.5, fontFamily: font.semibold, color: T.ink },
 
-  recentRow:    { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 16 },
-  recentBorder: { borderTopWidth: 1, borderTopColor: T.line },
-  recentTile:   { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  recentName:   { fontSize: 14, fontFamily: font.extrabold, color: T.ink },
-  recentSub:    { fontSize: 12, fontFamily: font.semibold, color: T.sub, marginTop: 2 },
-  recentSaved:  { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  recentSavedText: { fontSize: 14, fontFamily: font.extrabold, color: T.green },
+  recentRow:   { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: T.line },
+  recentName:  { fontSize: 15, fontFamily: font.bold, color: T.ink, letterSpacing: -0.3 },
+  recentSub:   { fontSize: 12.5, fontFamily: font.regular, color: T.sub, marginTop: 3 },
+  recentSaved: { fontSize: 15, fontFamily: font.semibold, color: T.green },
 
-  cta:      { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: T.blueSoft2 },
-  ctaIcon:  { width: 46, height: 46, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  ctaTitle: { fontSize: 15, fontFamily: font.extrabold, color: T.ink },
-  ctaSub:   { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 2 },
+  empty:       { alignItems: 'center', paddingHorizontal: 28, paddingTop: 40 },
+  emptyTitle:  { textAlign: 'center', marginTop: 20 },
+  emptyText:   { fontSize: 14, fontFamily: font.regular, color: T.sub, textAlign: 'center', marginTop: 12, lineHeight: 21 },
+  emptyBtn:    { marginTop: 24 },
+  note:        { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 28 },
+  noteText:    { flex: 1, fontSize: 12, fontFamily: font.regular, color: T.sub, lineHeight: 17 },
 });

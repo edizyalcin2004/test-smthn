@@ -1,19 +1,20 @@
-// AccountScreen — Hesabım. Pryce has no accounts yet, so this screen shows
-// only what is true today: no sign-up, what stays on the phone, real order
-// stats from on-device history, the privacy notice and the app version.
-// No fake profile, points, Pro price or settings rows (honesty crux).
+// AccountScreen — Hesabım (redesign PR 4, design 15). Doybi has no accounts,
+// so this screen shows only what is true today: no sign-up, what stays on the
+// phone, real on-device order stats, history, privacy, help and the version.
+// No fake profile, points, Pro or settings rows (honesty crux; founder ruling
+// 2026-10-25: no Settings screen, no Pro screen).
 import { useCallback, useState } from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { T, font, money } from '../theme/tokens';
-import { Screen, Card, Header, Pill } from '../components/ui';
-import { Icon, Spark } from '../components/icons';
+import { Screen, Title } from '../components/ui';
+import { Icon } from '../components/icons';
+import { Mascot } from '../components/Art';
 import { loadOrders } from '../lib/orders';
 import { summarize } from '../lib/savings';
+import { API_BASE_URL } from '../api/client';
 import appJson from '../../app.json';
 
-const mascot = require('../../assets/mascot.png');
 const VERSION = String(appJson?.expo?.version ?? '');
 
 export default function AccountScreen({ navigation }) {
@@ -22,85 +23,67 @@ export default function AccountScreen({ navigation }) {
   const sv = summarize(orders, Date.now());
   const toBudget = () => navigation.getParent()?.navigate('Budget');
 
-  const tiles = [
-    { icon: 'bag', value: String(sv.count), label: 'Onaylanan\nsipariş', c: T.blue, bg: T.blueSoft },
-    { icon: 'spark', value: money(Math.round(sv.total)), label: 'Toplam\ntasarruf', c: T.gold, bg: T.cream },
+  const rows = [
+    { icon: 'bag', title: 'Sipariş geçmişi', sub: sv.count ? `${sv.count} onaylı sipariş · ${money(Math.round(sv.total))} tasarruf` : 'Henüz onaylı sipariş yok', onPress: toBudget },
+    { icon: 'help', title: 'Gizlilik', sub: 'Neyi kaydediyoruz, neyi kaydetmiyoruz', onPress: () => navigation.navigate('Privacy') },
+    { icon: 'alert', title: 'Yardım & destek', sub: 'Nasıl çalıştığını öğren', onPress: () => Linking.openURL(`${API_BASE_URL}/support`).catch(() => {}) },
   ];
 
   return (
     <Screen>
-      <Header title="Hesabım" />
-
-      {/* no-account hero (navy) */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
-        <LinearGradient colors={['#0C2C5C', '#061B3A']} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={s.hero}>
-          <Spark s={14} style={s.sparkA} />
-          <Spark s={10} o={0.7} style={s.sparkB} />
-          <Image source={mascot} style={s.heroMascot} resizeMode="contain" />
-          <View style={{ maxWidth: '68%' }}>
-            <Text style={s.heroTitle}>Hesap gerekmez</Text>
-            <Text style={s.heroSub}>Doybi'yi kayıt olmadan kullanıyorsun. Sipariş geçmişin ve tasarrufun yalnızca bu telefonda tutulur.</Text>
-          </View>
-        </LinearGradient>
+      <View style={s.head}>
+        <Title accent="Doybi'n.">Senin</Title>
       </View>
 
-      {/* real, on-device stats */}
-      <View style={s.tiles}>
-        {tiles.map((t) => (
-          <Card key={t.label} pad={13} onPress={toBudget} style={{ flex: 1, gap: 9 }}>
-            <View style={[s.tileIcon, { backgroundColor: t.bg }]}><Icon name={t.icon} s={18} c={t.c} /></View>
-            <Text style={s.tileNum}>{t.value}</Text>
-            <Text style={s.tileLabel}>{t.label}</Text>
-          </Card>
+      <View style={s.callout}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.calloutTitle}>Hesap gerekmez.</Text>
+          <Text style={s.calloutText}>Kayıt olmadan kullanıyorsun. Sipariş geçmişin ve tasarrufun yalnızca bu telefonda tutulur.</Text>
+          <Pressable onPress={toBudget} style={s.calloutLink} hitSlop={6}>
+            <Text style={s.calloutLinkText}>Tasarrufuma bak</Text>
+            <Icon name="arrow" s={16} c={T.ink} />
+          </Pressable>
+        </View>
+        <Mascot pose="empty-basket" size={104} />
+      </View>
+
+      <View style={s.list}>
+        {rows.map((r) => (
+          <Pressable key={r.title} onPress={r.onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]} accessibilityRole="button">
+            <View style={s.rowIcon}><Icon name={r.icon} s={21} c={T.ink} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.rowTitle}>{r.title}</Text>
+              <Text style={s.rowSub} numberOfLines={1}>{r.sub}</Text>
+            </View>
+            <Icon name="chevR" s={18} c={T.ink} />
+          </Pressable>
         ))}
       </View>
 
-      {/* coming later — stated as not available, no price, no button */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
-        <Card style={s.soonRow}>
-          <View style={s.soonIcon}><Icon name="crown" s={20} c={T.amber} /></View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.soonTitle}>Hesap, puanlar ve Pro</Text>
-            <Text style={s.soonSub}>Henüz yok. Hazır olduğunda burada göreceksin.</Text>
-          </View>
-          <Pill bg={T.cream} fg={T.gold}>Yakında</Pill>
-        </Card>
+      <View style={s.note}>
+        <Icon name="help" s={15} c={T.sub} />
+        <Text style={s.noteText}>Doybi sipariş almaz, ödeme yöntemi veya teslimat adresi istemez. Siparişi seçtiğin platformda verirsin.</Text>
       </View>
-
-      {/* settings: only rows that do something */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
-        <Card pad={0}>
-          <Pressable style={s.settingRow} onPress={() => navigation.navigate('Privacy')}>
-            <Icon name="help" s={20} c={T.ink} />
-            <Text style={s.settingLabel}>Gizlilik</Text>
-            <Icon name="chevR" s={18} c={T.faint} sw={2.2} />
-          </Pressable>
-        </Card>
-        {VERSION ? <Text style={s.version}>Doybi · Sürüm {VERSION}</Text> : null}
-      </View>
+      {VERSION ? <Text style={s.version}>Doybi · Sürüm {VERSION}</Text> : null}
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  hero: { borderRadius: 22, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 22, overflow: 'hidden' },
-  sparkA: { position: 'absolute', left: '60%', top: '20%' },
-  sparkB: { position: 'absolute', left: '80%', top: '50%' },
-  heroMascot: { position: 'absolute', right: -8, bottom: -10, width: 96, height: 96 },
-  heroTitle: { color: '#fff', fontSize: 20, fontFamily: font.extrabold, letterSpacing: -0.4 },
-  heroSub: { color: 'rgba(255,255,255,0.72)', fontSize: 13, fontFamily: font.semibold, marginTop: 6, lineHeight: 19 },
+  head:        { paddingHorizontal: 20, paddingTop: 10 },
+  callout:     { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F1E6DA', borderRadius: 22, padding: 20, marginHorizontal: 20, marginTop: 22 },
+  calloutTitle:{ fontSize: 19, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5 },
+  calloutText: { fontSize: 13, fontFamily: font.regular, color: T.sub, marginTop: 6, lineHeight: 19 },
+  calloutLink: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  calloutLinkText: { fontSize: 14, fontFamily: font.medium, color: T.ink },
 
-  tiles: { paddingHorizontal: 20, paddingTop: 14, flexDirection: 'row', gap: 11 },
-  tileIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  tileNum: { fontSize: 22, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.4 },
-  tileLabel: { fontSize: 11, color: T.sub, fontFamily: font.semibold, lineHeight: 14 },
+  list:        { paddingHorizontal: 20, marginTop: 14 },
+  row:         { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: T.line },
+  rowIcon:     { width: 46, height: 46, borderRadius: 14, backgroundColor: '#ECEEE6', alignItems: 'center', justifyContent: 'center' },
+  rowTitle:    { fontSize: 16, fontFamily: font.bold, color: T.ink, letterSpacing: -0.3 },
+  rowSub:      { fontSize: 12.5, fontFamily: font.regular, color: T.sub, marginTop: 3 },
 
-  soonRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },
-  soonIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: T.navy, alignItems: 'center', justifyContent: 'center' },
-  soonTitle: { fontSize: 14.5, fontFamily: font.extrabold, color: T.ink },
-  soonSub: { fontSize: 12, color: T.sub, marginTop: 2, fontFamily: font.semibold, lineHeight: 16 },
-
-  settingRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 16 },
-  settingLabel: { flex: 1, fontSize: 14.5, fontFamily: font.bold, color: T.ink },
-  version: { textAlign: 'center', marginTop: 16, fontSize: 12, color: T.faint, fontFamily: font.semibold },
+  note:        { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 20, marginTop: 18 },
+  noteText:    { flex: 1, fontSize: 12, fontFamily: font.regular, color: T.sub, lineHeight: 17 },
+  version:     { textAlign: 'center', marginTop: 20, fontSize: 12, color: T.faint, fontFamily: font.regular },
 });

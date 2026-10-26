@@ -15,6 +15,7 @@
 // No delivery/ETA is shown — the backend returns none, so we invent none.
 import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Linking, Alert } from 'react-native';
+import { PressScale, Reveal } from '../../lib/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
 import { RoundBtn, Title } from '../../components/ui';
@@ -127,8 +128,8 @@ export default function ResultsScreen({ navigation }) {
           const winner = isMulti && effective(p) === cheapest;
           const next = comparable.find((x) => effective(x) > cheapest);
           return (
+            <Reveal key={String(p.platform.id)} index={i}>
             <PlatformRow
-              key={String(p.platform.id)}
               p={p}
               count={itemCount}
               selected={selected?.platform.id === p.platform.id}
@@ -138,6 +139,7 @@ export default function ResultsScreen({ navigation }) {
               lead={winner && next ? effective(next) - cheapest : 0}
               onCode={() => openRowCode(p)}
             />
+            </Reveal>
           );
         })}
 
@@ -168,10 +170,10 @@ export default function ResultsScreen({ navigation }) {
             </View>
             <Text style={s.barPrice}>{money(effective(selected))}</Text>
           </View>
-          <Pressable onPress={() => orderOn(selected)} style={({ pressed }) => [s.bar, pressed && { opacity: 0.9 }]} accessibilityRole="link">
+          <PressScale onPress={() => orderOn(selected)} style={s.bar} accessibilityRole="link">
             <Text style={s.barLabel}>{selected.order_link_kind === 'restaurant' ? 'Restoranı aç' : 'Platformu aç'}</Text>
             <Icon name="arrow" s={18} c="#fff" />
-          </Pressable>
+          </PressScale>
           <Text style={s.barNote}>Sepet aktarılmaz; ürünleri platformda seçersin.</Text>
         </View>
       ) : null}

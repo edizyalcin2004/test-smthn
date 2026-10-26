@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
 import { RoundBtn, Chip, Title, PrimaryButton } from '../../components/ui';
+import { Reveal } from '../../lib/motion';
 import { FoodArt, Mascot, foodType } from '../../components/Art';
 import { Icon } from '../../components/icons';
 import { getMenu, getItemOptions } from '../../api/client';
@@ -187,11 +188,11 @@ export default function MenuScreen({ route, navigation }) {
                       <View style={s.thumb}>
                         <FoodArt type={foodType(`${it.name} ${it.category ?? ''}`, art)} size={96} round={false} radius={14} />
                         {qty > 0 ? (
-                          <View style={s.stepper}>
+                          <Reveal style={s.stepper}>
                             <Pressable hitSlop={6} onPress={() => setQty(it, qty - 1)} style={s.stepBtn} accessibilityLabel={`${it.name} azalt`}><Icon name="minus" s={16} c={T.ink} /></Pressable>
                             <Text style={s.stepQty}>{qty}</Text>
                             <Pressable hitSlop={6} onPress={() => addItem(it, qty)} style={s.stepBtn} accessibilityLabel={`${it.name} artır`}><Icon name="plus" s={16} c={T.ink} /></Pressable>
-                          </View>
+                          </Reveal>
                         ) : (
                           <Pressable onPress={() => addItem(it, 0)} disabled={busyId === it.id} style={s.addBtn} accessibilityLabel={`${it.name} ekle`}>
                             {busyId === it.id ? <ActivityIndicator color="#fff" size="small" /> : <Icon name="plus" s={20} c="#fff" sw={2.2} />}
@@ -216,13 +217,13 @@ export default function MenuScreen({ route, navigation }) {
 
       {/* bottom basket bar -> review */}
       {count > 0 && !loading ? (
-        <View style={[s.barWrap, { paddingBottom: insets.bottom + 12 }]}>
+        <Reveal style={[s.barWrap, { paddingBottom: insets.bottom + 12 }]}>
           <View style={s.barInfo}>
             <Text style={s.barLabel}>Sepetim</Text>
             <Text style={s.barLabel}>{count} ürün · {money(total)}</Text>
           </View>
           <PrimaryButton onPress={() => navigation.navigate('Basket')}>Sepeti incele</PrimaryButton>
-        </View>
+        </Reveal>
       ) : null}
     </View>
   );

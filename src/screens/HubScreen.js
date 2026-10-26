@@ -4,6 +4,7 @@
 // soonest-expiring live codes (an urgency order, never a "best discount" rank).
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native';
+import { PressScale } from '../lib/motion';
 import { T, font, money } from '../theme/tokens';
 import { Screen, Title, PrimaryButton } from '../components/ui';
 import { Icon } from '../components/icons';
@@ -81,10 +82,10 @@ export default function HubScreen({ navigation }) {
 
       <View style={s.foods}>
         {FOODS.map(([type, label]) => (
-          <Pressable key={type} onPress={() => toSearch({ type, focus: Date.now() })} style={s.food} accessibilityRole="button" accessibilityLabel={label}>
+          <PressScale key={type} onPress={() => toSearch({ type, focus: Date.now() })} style={s.food} accessibilityRole="button" accessibilityLabel={label}>
             <FoodArt type={type} size={62} />
             <Text style={s.foodLabel}>{label}</Text>
-          </Pressable>
+          </PressScale>
         ))}
       </View>
 
@@ -101,7 +102,7 @@ export default function HubScreen({ navigation }) {
         ) : (
           <View style={s.grid}>
             {rests.slice(0, 2).map((r) => (
-              <Pressable key={String(r.id)} onPress={() => toMenu(r)} style={({ pressed }) => [s.card, { width: cardW }, pressed && { opacity: 0.85 }]} accessibilityRole="button">
+              <PressScale key={String(r.id)} onPress={() => toMenu(r)} style={[s.card, { width: cardW }]} accessibilityRole="button">
                 <FoodArt type={foodType(`${r.name} ${r.cuisine_type || ''}`)} size={cardW} height={Math.round(cardW * 0.62)} round={false} radius={0} />
                 <View style={s.cardBody}>
                   <Text style={s.cardName} numberOfLines={1}>{r.name}</Text>
@@ -110,13 +111,13 @@ export default function HubScreen({ navigation }) {
                     <Icon name="arrow" s={16} c={T.ink} />
                   </View>
                 </View>
-              </Pressable>
+              </PressScale>
             ))}
           </View>
         )}
       </View>
 
-      <Pressable onPress={() => toSearch({ type: 'all', focus: Date.now() })} style={s.callout} accessibilityRole="button">
+      <PressScale onPress={() => toSearch({ type: 'all', focus: Date.now() })} style={s.callout} accessibilityRole="button">
         <View style={{ flex: 1 }}>
           <Text style={s.calloutEyebrow}>AYNI LEZZET, FARKLI FİYATLAR</Text>
           <Title accent="karşılaştır." style={s.calloutTitle}>Önce</Title>
@@ -126,21 +127,21 @@ export default function HubScreen({ navigation }) {
           </View>
         </View>
         <Mascot pose="deal-search" size={120} />
-      </Pressable>
+      </PressScale>
 
       <View style={s.section}>
         <SectionHead title="Günün kodları" onAll={() => navigation.navigate('Deals')} />
         {loading ? null : top.length === 0 ? (
           <Text style={s.empty}>{error ? '' : 'Şu an aktif kod yok.'}</Text>
         ) : top.map((c) => (
-          <Pressable key={String(c.id)} onPress={() => openCode(c)} style={({ pressed }) => [s.code, pressed && { opacity: 0.85 }]} accessibilityRole="button">
+          <PressScale key={String(c.id)} onPress={() => openCode(c)} style={s.code} accessibilityRole="button">
             <View style={s.codeIcon}><Icon name="tag" s={20} c={T.ink} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.codeText} numberOfLines={1}>{c.code || c.title}</Text>
               <Text style={s.codeSub} numberOfLines={1}>{c.platform?.name} · {discountText(c)}</Text>
             </View>
             {timeLeft(c.expiry_date) ? <Text style={s.codeLeft}>{timeLeft(c.expiry_date)}</Text> : null}
-          </Pressable>
+          </PressScale>
         ))}
       </View>
     </Screen>

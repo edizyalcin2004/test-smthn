@@ -5,6 +5,7 @@
 // restaurant's product photo; no ratings are shown because none exist.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import { PressScale, Reveal } from '../../lib/motion';
 import { T, font } from '../../theme/tokens';
 import { Screen, Chip, Title, PrimaryButton } from '../../components/ui';
 import { Icon } from '../../components/icons';
@@ -138,11 +139,11 @@ export default function SearchScreen({ navigation, route }) {
           </View>
         ) : (
           <View style={s.grid}>
-            {list.map((r) => (
-              <Pressable
-                key={String(r.id)}
+            {list.map((r, i) => (
+              <Reveal key={String(r.id)} index={i}>
+              <PressScale
                 onPress={() => pick(r)}
-                style={({ pressed }) => [s.card, { width: cardW }, pressed && { opacity: 0.85 }]}
+                style={[s.card, { width: cardW }]}
                 accessibilityRole="button"
                 accessibilityLabel={`${r.name}, ${r.platformCount} platform`}
               >
@@ -156,7 +157,8 @@ export default function SearchScreen({ navigation, route }) {
                     <Icon name="arrow" s={16} c={T.ink} sw={1.8} />
                   </View>
                 </View>
-              </Pressable>
+              </PressScale>
+              </Reveal>
             ))}
           </View>
         )}

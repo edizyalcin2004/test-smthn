@@ -1,161 +1,200 @@
-// HubScreen — navy/gold rebuild. Compare hero → Search; "Günün Kodları" stays
-// LIVE: top-5 soonest-expiring discount codes from /discount-codes, each opening
-// the shared CodeSheet. Codes are sorted by expiry (NOT by discount_value) — an
-// honest urgency framing, never a "best discount" ranking.
+// HubScreen — Keşfet (redesign PR 4, design 01), wired live.
+// Food shortcuts open the restaurant list pre-filtered; the two restaurants
+// sold on the most platforms are shown first; "Günün kodları" lists the
+// soonest-expiring live codes (an urgency order, never a "best discount" rank).
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, Pressable, Image, ActivityIndicator, StyleSheet } from 'react-native';
-import { T, font } from '../theme/tokens';
-import { Screen, Card, Header, SectionHead, Brand } from '../components/ui';
-import { Icon, Spark } from '../components/icons';
-import { platformBrand } from '../lib/brand';
-import { getDiscountCodes } from '../api/client';
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native';
+import { T, font, money } from '../theme/tokens';
+import { Screen, Title, PrimaryButton } from '../components/ui';
+import { Icon } from '../components/icons';
+import { FoodArt, Mascot, foodType } from '../components/Art';
+import { getDiscountCodes, getRestaurants } from '../api/client';
 import { useCodeSheet } from '../components/CodeSheet';
 
-const mascot = require('../../assets/mascot.png');
-
+const RETIRED = new Set(['Getir Yemek']);
+const FOODS = [['burger', 'Burger'], ['pizza', 'Pizza'], ['chicken', 'Tavuk'], ['wrap', 'Dürüm']];
+const num = (v) => Number(v ?? 0);
 const discountText = (c) =>
-  c.discount_type === 'percentage' ? `%${c.discount_value} indirim` : `₺${c.discount_value} indirim`;
+  c.discount_type === 'percentage' ? `%${num(c.discount_value)} indirim` : `${money(num(c.discount_value))} indirim`;
 
 function timeLeft(expiry) {
   if (!expiry) return null;
-  const d = new Date(expiry);
-  if (isNaN(d.getTime())) return null;
-  const ms = d.getTime() - Date.now();
-  if (ms <= 0) return 'Doldu';
+  const ms = new Date(expiry).getTime() - Date.now();
+  if (isNaN(ms)) return null;
+  if (ms <= 0) return 'Süresi doldu';
   const days = Math.floor(ms / 86400000);
-  if (days >= 1) return `${days} gün`;
+  if (days >= 1) return `${days} gün kaldı`;
   const hrs = Math.floor(ms / 3600000);
-  if (hrs >= 1) return `${hrs} saat`;
-  return `${Math.max(1, Math.floor(ms / 60000))} dk`;
+  return hrs >= 1 ? `${hrs} saat kaldı` : `${Math.max(1, Math.floor(ms / 60000))} dk kaldı`;
 }
 
 export default function HubScreen({ navigation }) {
   const { openCode } = useCodeSheet();
+  const { width } = useWindowDimensions();
+  const cardW = Math.floor((width - 40 - 12) / 2);
   const [codes, setCodes]     = useState([]);
+  const [rests, setRests]     = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [error, setError]     = useState(false);
   const mounted               = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setError(false);
     try {
-      const data = await getDiscountCodes(); // all restaurants + platform-wide
-      if (mounted.current) setCodes(data || []);
+      const [c, r] = await Promise.all([getDiscountCodes(), getRestaurants()]);
+      if (!mounted.current) return;
+      setCodes((c || []).filter((x) => !RETIRED.has(x.platform?.name)));
+      setRests((r || []).filter((x) => x.slug !== 'komagene').map((x) => {
+        const names = new Set();
+        for (const it of x.menu_items || []) for (const p of it.prices || []) if (p.platform?.name && !RETIRED.has(p.platform.name)) names.add(p.platform.name);
+        return { ...x, platformCount: names.size };
+      }).sort((a, b) => b.platformCount - a.platformCount || a.name.localeCompare(b.name, 'tr')));
     } catch {
-      if (mounted.current) setError('Kodlar yüklenemedi.');
+      if (mounted.current) setError(true);
     } finally {
       if (mounted.current) setLoading(false);
     }
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Soonest-expiring first; codes without an expiry sink to the bottom. Top 5.
   const top = useMemo(() => {
-    const ts = (c) => {
-      const d = c.expiry_date ? new Date(c.expiry_date).getTime() : NaN;
-      return isNaN(d) ? Infinity : d;
-    };
+    const ts = (c) => { const d = c.expiry_date ? new Date(c.expiry_date).getTime() : NaN; return isNaN(d) ? Infinity : d; };
     return [...codes].sort((a, b) => ts(a) - ts(b)).slice(0, 5);
   }, [codes]);
 
+  const toSearch = (params) => navigation.navigate('Compare', { screen: 'Search', params });
+  const toMenu = (r) => navigation.navigate('Compare', { screen: 'Menu', params: { restaurant: r }, initial: false });
+
   return (
     <Screen>
-      <Header
-        title="Merhaba 👋"
-        sub="Bugün ne yemek istersin?"
-        onBell={() => navigation.navigate('Deals')}
-      />
-
-      {/* compare hero */}
-      <View style={s.heroWrap}>
-        <Pressable onPress={() => navigation.navigate('Compare', { screen: 'Search' })} style={s.hero}>
-          <Spark s={16} style={s.spark1} />
-          <Spark s={10} o={0.7} style={s.spark2} />
-          <Spark s={12} o={0.6} style={s.spark3} />
-          <Image source={mascot} style={s.mascot} resizeMode="contain" />
-          <View style={s.heroBody}>
-            <Text style={s.heroTitle}>Fiyat karşılaştırması başlat</Text>
-            <Text style={s.heroSub}>Restoran veya mutfak seç,{'\n'}en iyi fiyatı bulalım.</Text>
-            <View style={s.heroCta}>
-              <Text style={s.heroCtaText}>Karşılaştırmaya başla</Text>
-              <Icon name="chevR" s={16} c="#fff" sw={2.4} />
-            </View>
-          </View>
-        </Pressable>
+      <View style={s.head}>
+        <Title accent="çekiyor?">Canın ne</Title>
+        <Text style={s.lead}>Seç, karşılaştır, doy.</Text>
       </View>
 
-      {/* Günün Kodları */}
+      <Pressable onPress={() => toSearch({ type: 'all', focus: Date.now() })} style={s.searchBox} accessibilityRole="search">
+        <Icon name="search" s={20} c={T.ink} />
+        <Text style={s.searchText}>Restoran veya mutfak ara</Text>
+      </Pressable>
+
+      <View style={s.foods}>
+        {FOODS.map(([type, label]) => (
+          <Pressable key={type} onPress={() => toSearch({ type, focus: Date.now() })} style={s.food} accessibilityRole="button" accessibilityLabel={label}>
+            <FoodArt type={type} size={62} />
+            <Text style={s.foodLabel}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       <View style={s.section}>
-        <SectionHead title="Günün Kodları" action="Tümünü gör" onAction={() => navigation.navigate('Deals')} />
+        <SectionHead title="Restoranları keşfet" onAll={() => toSearch({ type: 'all', focus: Date.now() })} />
         {loading ? (
-          <Card style={s.stateCard}><ActivityIndicator color={T.blue} /></Card>
+          <View style={s.state}><ActivityIndicator color={T.ink} /></View>
         ) : error ? (
-          <Card style={s.stateCard}>
-            <Text style={s.errText}>{error}</Text>
-            <Pressable onPress={load} style={s.retry}><Text style={s.retryText}>Tekrar dene</Text></Pressable>
-          </Card>
-        ) : top.length === 0 ? (
-          <Card style={s.stateCard}><Text style={s.empty}>Şu an aktif kod yok</Text></Card>
+          <View style={s.state}>
+            <Mascot pose="no-results" size={96} />
+            <Text style={s.stateTitle}>Veriler şu an yüklenemedi.</Text>
+            <PrimaryButton onPress={load} style={s.stateBtn}>Tekrar dene</PrimaryButton>
+          </View>
         ) : (
-          <Card pad={0}>
-            {top.map((c, i) => {
-              const left = timeLeft(c.expiry_date);
-              return (
-                <Pressable
-                  key={String(c.id)}
-                  onPress={() => openCode(c)}
-                  style={({ pressed }) => [s.codeRow, i ? s.codeBorder : null, pressed && s.pressed]}
-                >
-                  <Brand brand={platformBrand(c.platform)} size={42} radius={12} />
-                  <View style={s.codeMeta}>
-                    <Text style={s.codeText} numberOfLines={1}>{c.code || c.title}</Text>
-                    <Text style={s.codeDesc} numberOfLines={1}>{discountText(c)}</Text>
+          <View style={s.grid}>
+            {rests.slice(0, 2).map((r) => (
+              <Pressable key={String(r.id)} onPress={() => toMenu(r)} style={({ pressed }) => [s.card, { width: cardW }, pressed && { opacity: 0.85 }]} accessibilityRole="button">
+                <FoodArt type={foodType(`${r.name} ${r.cuisine_type || ''}`)} size={cardW} height={Math.round(cardW * 0.62)} round={false} radius={0} />
+                <View style={s.cardBody}>
+                  <Text style={s.cardName} numberOfLines={1}>{r.name}</Text>
+                  <View style={s.cardFoot}>
+                    <Text style={s.cardSub}>{r.platformCount > 1 ? `${r.platformCount} platform` : 'Menüyü incele'}</Text>
+                    <Icon name="arrow" s={16} c={T.ink} />
                   </View>
-                  {left ? (
-                    <View style={s.left}>
-                      <Icon name="clock" s={13} c={T.faint} />
-                      <Text style={s.leftText}>{left}</Text>
-                    </View>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </Card>
+                </View>
+              </Pressable>
+            ))}
+          </View>
         )}
+      </View>
+
+      <Pressable onPress={() => toSearch({ type: 'all', focus: Date.now() })} style={s.callout} accessibilityRole="button">
+        <View style={{ flex: 1 }}>
+          <Text style={s.calloutEyebrow}>AYNI LEZZET, FARKLI FİYATLAR</Text>
+          <Title accent="karşılaştır." style={s.calloutTitle}>Önce</Title>
+          <View style={s.calloutLink}>
+            <Text style={s.calloutLinkText}>Menüleri keşfet</Text>
+            <Icon name="arrow" s={16} c={T.ink} />
+          </View>
+        </View>
+        <Mascot pose="deal-search" size={120} />
+      </Pressable>
+
+      <View style={s.section}>
+        <SectionHead title="Günün kodları" onAll={() => navigation.navigate('Deals')} />
+        {loading ? null : top.length === 0 ? (
+          <Text style={s.empty}>{error ? '' : 'Şu an aktif kod yok.'}</Text>
+        ) : top.map((c) => (
+          <Pressable key={String(c.id)} onPress={() => openCode(c)} style={({ pressed }) => [s.code, pressed && { opacity: 0.85 }]} accessibilityRole="button">
+            <View style={s.codeIcon}><Icon name="tag" s={20} c={T.ink} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.codeText} numberOfLines={1}>{c.code || c.title}</Text>
+              <Text style={s.codeSub} numberOfLines={1}>{c.platform?.name} · {discountText(c)}</Text>
+            </View>
+            {timeLeft(c.expiry_date) ? <Text style={s.codeLeft}>{timeLeft(c.expiry_date)}</Text> : null}
+          </Pressable>
+        ))}
       </View>
     </Screen>
   );
 }
 
+function SectionHead({ title, onAll }) {
+  return (
+    <View style={s.sectionHead}>
+      <Text style={s.sectionTitle}>{title}</Text>
+      <Pressable onPress={onAll} style={s.all} hitSlop={8}>
+        <Text style={s.allText}>Tümü</Text>
+        <Icon name="arrow" s={16} c={T.ink} />
+      </Pressable>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
-  heroWrap:  { paddingHorizontal: 20, paddingTop: 8 },
-  hero:      { borderRadius: 22, padding: 22, overflow: 'hidden', backgroundColor: T.navy },
-  spark1:    { position: 'absolute', left: '58%', top: 20 },
-  spark2:    { position: 'absolute', left: '80%', top: 50 },
-  spark3:    { position: 'absolute', left: '68%', top: 90 },
-  mascot:    { position: 'absolute', right: -14, bottom: -18, width: 132, height: 132 },
-  heroBody:  { maxWidth: '74%' },
-  heroTitle: { color: '#fff', fontSize: 20, fontFamily: font.extrabold, letterSpacing: -0.4, lineHeight: 25 },
-  heroSub:   { color: 'rgba(255,255,255,0.7)', fontSize: 13.5, marginTop: 7, lineHeight: 19, fontFamily: font.medium },
-  heroCta:   { marginTop: 18, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: T.blue, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 14 },
-  heroCtaText: { color: '#fff', fontSize: 14, fontFamily: font.extrabold },
+  head:        { paddingHorizontal: 20, paddingTop: 10 },
+  lead:        { fontSize: 14, fontFamily: font.regular, color: T.sub, marginTop: 8 },
+  searchBox:   { marginHorizontal: 20, marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#EDEDE6', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 15 },
+  searchText:  { fontSize: 15, fontFamily: font.regular, color: T.sub },
+  foods:       { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 28, marginTop: 18 },
+  food:        { alignItems: 'center', gap: 8 },
+  foodLabel:   { fontSize: 13, fontFamily: font.semibold, color: T.ink },
 
-  section:   { paddingHorizontal: 20, paddingTop: 26 },
+  section:     { paddingHorizontal: 20, marginTop: 26 },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  sectionTitle:{ fontSize: 19, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5 },
+  all:         { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  allText:     { fontSize: 13.5, fontFamily: font.regular, color: T.ink },
 
-  codeRow:   { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14, paddingHorizontal: 16 },
-  codeBorder:{ borderTopWidth: 1, borderTopColor: T.line },
-  pressed:   { opacity: 0.6 },
-  codeMeta:  { flex: 1, minWidth: 0 },
-  codeText:  { fontSize: 14.5, fontFamily: font.extrabold, color: T.ink, letterSpacing: 0.3 },
-  codeDesc:  { fontSize: 12.5, fontFamily: font.bold, color: T.green, marginTop: 2 },
-  left:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  leftText:  { fontSize: 12.5, fontFamily: font.bold, color: T.faint },
+  grid:        { flexDirection: 'row', justifyContent: 'space-between' },
+  card:        { backgroundColor: T.white, borderRadius: 16, borderWidth: 1, borderColor: T.line, overflow: 'hidden' },
+  cardBody:    { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 12 },
+  cardName:    { fontSize: 15, fontFamily: font.bold, color: T.ink, letterSpacing: -0.3 },
+  cardFoot:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 5 },
+  cardSub:     { fontSize: 12.5, fontFamily: font.regular, color: T.sub },
 
-  stateCard: { alignItems: 'center', paddingVertical: 26 },
-  empty:     { fontSize: 13.5, fontFamily: font.semibold, color: T.faint },
-  errText:   { fontSize: 13.5, fontFamily: font.semibold, color: T.coral },
-  retry:     { marginTop: 12, paddingVertical: 8, paddingHorizontal: 18 },
-  retryText: { fontSize: 14, fontFamily: font.bold, color: T.blue },
+  callout:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1E6DA', borderRadius: 22, padding: 20, marginHorizontal: 20, marginTop: 20, overflow: 'hidden' },
+  calloutEyebrow: { fontSize: 9.5, fontFamily: font.semibold, color: T.sub, letterSpacing: 1.6 },
+  calloutTitle:   { fontSize: 28, lineHeight: 32, marginTop: 8 },
+  calloutLink:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  calloutLinkText:{ fontSize: 13.5, fontFamily: font.medium, color: T.ink },
+
+  code:        { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: T.white, borderRadius: 16, borderWidth: 1, borderColor: T.line, padding: 14, marginBottom: 10 },
+  codeIcon:    { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFF0C5', alignItems: 'center', justifyContent: 'center' },
+  codeText:    { fontSize: 15, fontFamily: font.bold, color: T.ink },
+  codeSub:     { fontSize: 12, fontFamily: font.regular, color: T.sub, marginTop: 2 },
+  codeLeft:    { fontSize: 12, fontFamily: font.regular, color: T.sub },
+
+  state:       { alignItems: 'center', paddingVertical: 20 },
+  stateTitle:  { fontSize: 16, fontFamily: font.medium, color: T.ink, marginTop: 10 },
+  stateBtn:    { marginTop: 14, width: 'auto', paddingHorizontal: 24 },
+  empty:       { fontSize: 13.5, fontFamily: font.regular, color: T.sub },
 });

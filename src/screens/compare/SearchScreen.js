@@ -27,12 +27,18 @@ const CHIPS = [
 
 const fold = (v) => String(v || '').toLocaleLowerCase('tr-TR');
 
-export default function SearchScreen({ navigation }) {
+export default function SearchScreen({ navigation, route }) {
   const [all, setAll]         = useState([]);
   const [q, setQ]             = useState('');
   const [type, setType]       = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+  // Keşfet's food shortcuts open this list pre-filtered (`focus` makes a repeat
+  // tap on the same shortcut apply again).
+  useEffect(() => {
+    const t = route?.params?.type;
+    if (t && CHIPS.some((c) => c.value === t)) { setType(t); setQ(''); }
+  }, [route?.params?.type, route?.params?.focus]);
   const mounted               = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
   const cardW = Math.floor((useWindowDimensions().width - 40 - 12) / 2);

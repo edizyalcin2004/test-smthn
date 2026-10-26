@@ -1,16 +1,15 @@
-// BasketScreen — "Sepetin" review step between Menu and Results.
-// Lines are REAL menu items with a quantity (no customization — the backend
-// prices flat items, so there is nothing to edit; Düzenle from the design is
-// deliberately omitted). Çoğalt bumps qty, Kaldır removes the line.
+// BasketScreen — "Sepetin hazır mı?" (design 06), between Menu and Results.
+// Lines are REAL menu items with a quantity and, where verified, chosen options.
+// Düzenle from the design is omitted: re-choosing options happens by removing
+// the line and adding it again from the menu.
 // POSTs /compare-basket from here and navigates to Results.
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
-import { Card, RoundBtn } from '../../components/ui';
+import { RoundBtn, Title, PrimaryButton } from '../../components/ui';
+import { FoodArt, Mascot, foodType } from '../../components/Art';
 import { Icon } from '../../components/icons';
-import Food from '../../components/Food';
-import { foodIconFor } from '../../lib/foodIcon';
 import { randomId, compareContext } from '../../lib/telemetry';
 import { basketProblem } from '../../lib/options';
 import { compareBasket } from '../../api/client';
@@ -59,148 +58,120 @@ export default function BasketScreen({ navigation }) {
     }
   }, [lines, restaurant, navigation, setResults, setCompareId]);
 
+  const art = foodType(`${restaurant?.name ?? ''} ${restaurant?.cuisine_type ?? ''}`);
+
   return (
     <View style={s.root}>
-      {/* header */}
       <View style={[s.header, { paddingTop: insets.top + 4 }]}>
-        <RoundBtn onPress={() => navigation.goBack()} size={40}><Icon name="back" s={20} c={T.ink} /></RoundBtn>
-        <View style={{ flexShrink: 1 }}>
-          <Text style={s.title}>Sepetin</Text>
-          <Text style={s.sub} numberOfLines={1}>{restaurant?.name ?? ''} · {count} ürün</Text>
-        </View>
+        <RoundBtn onPress={() => navigation.goBack()} size={44} accessibilityLabel="Geri"><Icon name="back" s={20} c={T.ink} /></RoundBtn>
+        <Text style={s.headTitle}>Sepetim</Text>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: lines.length ? 160 : 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: lines.length ? 170 : 40 }}
       >
         {lines.length === 0 ? (
           <View style={s.emptyWrap}>
-            <Text style={s.emptyTitle}>Sepetin boş</Text>
-            <Text style={s.emptyDesc}>Menüden ürün ekleyerek karşılaştırmaya başla.</Text>
-            <Pressable onPress={() => navigation.goBack()} style={s.emptyBtn}>
-              <Text style={s.emptyBtnText}>Menüye dön</Text>
-            </Pressable>
+            <Mascot pose="empty-basket" size={150} />
+            <Text style={s.emptyTitle}>Sepetin henüz boş.</Text>
+            <Text style={s.emptyDesc}>Menüden birkaç ürün ekle, aynı sepeti her platformda karşılaştıralım.</Text>
+            <PrimaryButton onPress={() => navigation.goBack()} style={s.emptyBtn}>Menüye dön</PrimaryButton>
           </View>
         ) : (
-          <View style={{ gap: 12 }}>
-            {lines.map(({ item, qty, options }) => (
-              <Card key={String(item.id)} pad={0} style={s.lineCard}>
-                <View style={s.lineBody}>
-                  <View style={s.thumb}>
-                    <Food name={foodIconFor(item.name, item.category)} s={40} />
-                    {qty > 1 ? (
-                      <View style={s.thumbBadge}><Text style={s.thumbBadgeText}>{qty}</Text></View>
-                    ) : null}
-                  </View>
-                  <View style={s.lineMeta}>
-                    <View style={s.lineTop}>
-                      <Text style={s.lineName} numberOfLines={2}>{item.name}</Text>
-                      <Text style={s.linePrice}>{money(Number(item.price || 0) * qty)}</Text>
-                    </View>
-                    <Text style={s.lineSub} numberOfLines={1}>
-                      {qty > 1 ? `${qty} × ${money(item.price)}` : (item.category || '')}
-                    </Text>
-                    {options?.summary ? <Text style={s.lineSub} numberOfLines={2}>{options.summary}</Text> : null}
-                  </View>
-                </View>
-                {/* actions */}
-                <View style={s.actions}>
-                  <ActBtn icon="copy" label="Çoğalt" onPress={() => setQty(item, qty + 1)} />
-                  <View style={s.actRule} />
-                  <ActBtn icon="minus" label="Azalt" onPress={() => setQty(item, qty - 1)} disabled={qty <= 1} />
-                  <View style={s.actRule} />
-                  <ActBtn icon="x" label="Kaldır" onPress={() => setQty(item, 0)} danger />
-                </View>
-              </Card>
-            ))}
+          <>
+            <Title accent="hazır mı?">Sepetin</Title>
+            <Text style={s.sub} numberOfLines={1}>{restaurant?.name ?? ''} · {count} ürün</Text>
 
-            {/* honesty note — final price is computed in the comparison */}
-            <View style={s.noteRow}>
-              <Icon name="alert" s={14} c={T.faint} />
-              <Text style={s.noteText}>Nihai fiyat platform ve kodlara göre karşılaştırmada hesaplanır.</Text>
+            <View style={s.list}>
+              {lines.map(({ item, qty, options }) => (
+                <View key={String(item.id)} style={s.line}>
+                  <FoodArt type={foodType(`${item.name} ${item.category ?? ''}`, art)} size={70} round={false} radius={14} />
+                  <View style={s.lineMeta}>
+                    <Text style={s.lineName} numberOfLines={2}>{item.name}</Text>
+                    <Text style={s.lineSub} numberOfLines={2}>
+                      {options?.summary || (qty > 1 ? `${qty} × ${money(item.price)}` : money(Number(item.price || 0)))}
+                    </Text>
+                    <View style={s.lineActions}>
+                      <View style={s.stepper}>
+                        <Pressable hitSlop={6} onPress={() => setQty(item, qty - 1)} disabled={qty <= 1} style={[s.stepBtn, qty <= 1 && { opacity: 0.3 }]} accessibilityLabel={`${item.name} azalt`}><Icon name="minus" s={16} c={T.ink} /></Pressable>
+                        <Text style={s.stepQty}>{qty}</Text>
+                        <Pressable hitSlop={6} onPress={() => setQty(item, qty + 1)} style={s.stepBtn} accessibilityLabel={`${item.name} artır`}><Icon name="plus" s={16} c={T.ink} /></Pressable>
+                      </View>
+                      <Pressable hitSlop={8} onPress={() => setQty(item, 0)} accessibilityLabel={`${item.name} kaldır`}><Icon name="trash" s={20} c={T.red} sw={1.7} /></Pressable>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            <Pressable onPress={() => navigation.goBack()} style={s.addMore} accessibilityRole="button">
+              <Text style={s.addMoreText}>Başka ürün ekle</Text>
+              <Icon name="plus" s={17} c={T.ink} />
+            </Pressable>
+
+            <View style={s.callout}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.calloutTitle}>Aynı sepeti karşılaştır.</Text>
+                <Text style={s.calloutText}>Her platformda yalnızca bu ürünlerin hepsini bulduğumuz toplamları yan yana koyarız.</Text>
+              </View>
+              <Mascot pose="deal-search" size={96} />
             </View>
 
             {error ? <Text style={s.errText}>{error}</Text> : null}
-          </View>
+          </>
         )}
       </ScrollView>
 
-      {/* sticky compare CTA */}
       {lines.length > 0 ? (
         <View style={[s.barWrap, { paddingBottom: insets.bottom + 12 }]}>
           <Pressable
             onPress={compare}
             disabled={comparing}
-            style={({ pressed }) => [s.bar, (pressed || comparing) && s.barDim]}
+            style={({ pressed }) => [s.bar, (pressed || comparing) && { opacity: 0.9 }]}
+            accessibilityRole="button"
           >
-            <View style={s.barLeft}>
-              <Icon name="search" s={18} c="#fff" />
-              <Text style={s.barLabel}>Fiyatları karşılaştır</Text>
-            </View>
-            {comparing ? <ActivityIndicator color="#fff" /> : <Text style={s.barTotal}>{money(subtotal)}</Text>}
+            {comparing ? <ActivityIndicator color="#fff" /> : <Text style={s.barLabel}>Fiyatları karşılaştır</Text>}
           </Pressable>
+          <Text style={s.barNote}>Siparişini seçtiğin platformda tamamlarsın. Teslimat ücreti hariç.</Text>
         </View>
       ) : null}
     </View>
   );
 }
 
-function ActBtn({ icon, label, onPress, danger, disabled }) {
-  const c = danger ? T.red : T.sub;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [s.actBtn, (pressed || disabled) && { opacity: disabled ? 0.35 : 0.6 }]}
-    >
-      <Icon name={icon} s={16} c={c} sw={2.2} />
-      <Text style={[s.actText, { color: c }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: T.bg },
+  root:      { flex: 1, backgroundColor: T.bg },
+  header:    { paddingHorizontal: 18, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headTitle: { fontSize: 17, fontFamily: font.bold, color: T.ink, letterSpacing: -0.3 },
+  sub:       { fontSize: 14, fontFamily: font.regular, color: T.sub, marginTop: 8 },
 
-  header: { paddingHorizontal: 18, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title:  { fontSize: 21, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.4 },
-  sub:    { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 2 },
+  emptyWrap:  { paddingTop: 50, paddingHorizontal: 16, alignItems: 'center' },
+  emptyTitle: { fontSize: 24, fontFamily: font.medium, color: T.ink, marginTop: 18, letterSpacing: -0.6 },
+  emptyDesc:  { fontSize: 14, fontFamily: font.regular, color: T.sub, marginTop: 8, textAlign: 'center', lineHeight: 20 },
+  emptyBtn:   { marginTop: 20, width: 'auto', paddingHorizontal: 28 },
 
-  emptyWrap:    { paddingTop: 60, paddingHorizontal: 20, alignItems: 'center' },
-  emptyTitle:   { fontSize: 16, fontFamily: font.extrabold, color: T.ink },
-  emptyDesc:    { fontSize: 13, fontFamily: font.medium, color: T.sub, marginTop: 6, textAlign: 'center' },
-  emptyBtn:     { marginTop: 18, backgroundColor: T.blueSoft, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 13 },
-  emptyBtnText: { fontSize: 14, fontFamily: font.extrabold, color: T.blue },
+  list:       { marginTop: 18 },
+  line:       { flexDirection: 'row', gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: T.line },
+  lineMeta:   { flex: 1, minWidth: 0 },
+  lineName:   { fontSize: 15.5, fontFamily: font.bold, color: T.ink, letterSpacing: -0.3, lineHeight: 20 },
+  lineSub:    { fontSize: 12.5, fontFamily: font.regular, color: T.sub, marginTop: 4 },
+  lineActions:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  stepper:    { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: T.line, backgroundColor: T.white, borderRadius: 999, paddingHorizontal: 8, height: 38 },
+  stepBtn:    { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
+  stepQty:    { fontSize: 15, fontFamily: font.bold, color: T.ink, minWidth: 14, textAlign: 'center' },
 
-  lineCard: { overflow: 'hidden' },
-  lineBody: { flexDirection: 'row', gap: 13, paddingHorizontal: 16, paddingTop: 15, paddingBottom: 14 },
-  thumb:    { width: 54, height: 54, borderRadius: 14, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' },
-  thumbBadge: {
-    position: 'absolute', top: -6, right: -6, minWidth: 20, height: 20, paddingHorizontal: 5,
-    borderRadius: 999, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: T.white,
-  },
-  thumbBadgeText: { fontSize: 11, fontFamily: font.extrabold, color: '#fff' },
-  lineMeta: { flex: 1, minWidth: 0 },
-  lineTop:  { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  lineName: { flex: 1, minWidth: 0, fontSize: 15, fontFamily: font.extrabold, color: T.ink, lineHeight: 20 },
-  linePrice:{ fontSize: 15, fontFamily: font.extrabold, color: T.ink, flexShrink: 0 },
-  lineSub:  { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 3 },
+  addMore:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 16 },
+  addMoreText:{ fontSize: 14, fontFamily: font.medium, color: T.ink },
 
-  actions:  { flexDirection: 'row', alignItems: 'stretch', borderTopWidth: 1, borderTopColor: T.line },
-  actBtn:   { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, paddingHorizontal: 8 },
-  actText:  { fontSize: 13, fontFamily: font.bold },
-  actRule:  { width: 1, backgroundColor: T.line },
+  callout:      { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#EAE8E0', borderRadius: 20, padding: 18, marginTop: 10 },
+  calloutTitle: { fontSize: 17, fontFamily: font.bold, color: T.ink, letterSpacing: -0.4 },
+  calloutText:  { fontSize: 13, fontFamily: font.regular, color: T.sub, marginTop: 6, lineHeight: 18 },
+  errText:      { fontSize: 13, fontFamily: font.semibold, color: T.red, textAlign: 'center', marginTop: 14 },
 
-  noteRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2, paddingVertical: 4 },
-  noteText: { flex: 1, fontSize: 12, fontFamily: font.semibold, color: T.faint },
-  errText:  { fontSize: 13, fontFamily: font.semibold, color: T.coral, textAlign: 'center', marginTop: 4 },
-
-  barWrap:  { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16 },
-  bar:      { backgroundColor: T.navy, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  barDim:   { opacity: 0.9 },
-  barLeft:  { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
-  barLabel: { fontSize: 15, fontFamily: font.extrabold, color: '#fff' },
-  barTotal: { fontSize: 15, fontFamily: font.extrabold, color: '#fff' },
+  barWrap:   { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: T.bg, borderTopWidth: 1, borderTopColor: T.line },
+  bar:       { backgroundColor: T.ink, borderRadius: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
+  barLabel:  { fontSize: 16, fontFamily: font.bold, color: '#fff' },
+  barNote:   { fontSize: 11.5, fontFamily: font.regular, color: T.sub, textAlign: 'center', marginTop: 8 },
 });

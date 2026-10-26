@@ -76,9 +76,9 @@ export function PrimaryButton({ children, onPress, bg = T.ink, fg = '#fff', styl
   );
 }
 
-export function RoundBtn({ children, onPress, size = 42, badge, bg = T.white, style }) {
+export function RoundBtn({ children, onPress, size = 42, badge, bg = T.white, style, accessibilityLabel }) {
   return (
-    <Pressable onPress={onPress} style={[s.roundBtn, { width: size, height: size, backgroundColor: bg }, style]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel} style={[s.roundBtn, { width: size, height: size, backgroundColor: bg }, style]}>
       {children}
       {badge ? <View style={s.badge} /> : null}
     </Pressable>

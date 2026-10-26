@@ -21,6 +21,14 @@ const PATHS = {
   filter: (c, sw) => <Path d="M4 6h16M7 12h10M10 18h4" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,
   back: (c, sw) => <Path d="M15 5l-7 7 7 7" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,
   chevR: (c, sw) => <Path d="M9 5l7 7-7 7" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,
+  arrow: (c, sw) => <Path d="M5 12h14M13 6l6 6-6 6" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,
+  trash: (c, sw) => <Path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10.5 10.5v5.5M13.5 10.5v5.5" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,
+  tag: (c, sw) => (
+    <>
+      <Path d="M3.5 12.2V4.5h7.7l9.3 9.3-7.7 7.7-9.3-9.3z" stroke={c} strokeWidth={sw} strokeLinejoin="round" />
+      <Circle cx="8" cy="9" r="1.4" stroke={c} strokeWidth={sw} />
+    </>
+  ),
   chevD: (c, sw) => <Path d="M6 9l6 6 6-6" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,
   plus: (c, sw) => <Path d="M12 5v14M5 12h14" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,
   minus: (c, sw) => <Path d="M5 12h14" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />,

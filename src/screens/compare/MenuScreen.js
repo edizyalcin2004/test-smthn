@@ -1,4 +1,4 @@
-// MenuScreen — navy/gold rebuild, wired live. Reads /menu and builds a basket
+// MenuScreen — Doybi redesign PR 2 (design 03), wired live. Reads /menu and builds a basket
 // in Compare-level state. Continuous scroll with one section per REAL backend
 // category; the category chips scroll-spy the list (tap → jump to section).
 // The bottom bar goes to the Basket review screen — comparing happens there.
@@ -6,22 +6,22 @@
 // that configuration. Unknown option data never falls back to a base-price comparison.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet, Alert,
+  View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet, Alert, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../../theme/tokens';
-import { RoundBtn } from '../../components/ui';
+import { RoundBtn, Chip, Title, PrimaryButton } from '../../components/ui';
+import { FoodArt, Mascot, foodType } from '../../components/Art';
 import { Icon } from '../../components/icons';
-import Food from '../../components/Food';
-import { foodIconFor } from '../../lib/foodIcon';
 import { getMenu, getItemOptions } from '../../api/client';
 import OptionSheet from '../../components/OptionSheet';
 import { useCompare } from '../CompareScreen';
 
-const SPY_OFFSET = 70; // px below the chips where a section counts as "current"
+const SPY_OFFSET = 80;  // px below the chips where a section counts as "current"
 
 export default function MenuScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { restaurant: ctxRestaurant, setRestaurant, basket, setQty } = useCompare();
   const restaurant = route.params?.restaurant ?? ctxRestaurant;
 
@@ -37,7 +37,6 @@ export default function MenuScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [tab, setTab]         = useState(null);
-  const [fav, setFav]         = useState(false);
   const mounted               = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
 
@@ -90,6 +89,7 @@ export default function MenuScreen({ route, navigation }) {
   // scroll-spy plumbing
   const scrollRef      = useRef(null);
   const sectionY       = useRef({});           // cat -> content y
+  const listY          = useRef(0);            // y of the section list in the scroll content
   const clickScrolling = useRef(false);
   const spyTimer       = useRef(null);
 
@@ -109,7 +109,7 @@ export default function MenuScreen({ route, navigation }) {
     const y = sectionY.current[cat];
     if (scrollRef.current && y != null) {
       clickScrolling.current = true;
-      scrollRef.current.scrollTo({ y: Math.max(0, y - 10), animated: true });
+      scrollRef.current.scrollTo({ y: Math.max(0, y - 62), animated: true }); // clear the sticky chips
       clearTimeout(spyTimer.current);
       spyTimer.current = setTimeout(() => { clickScrolling.current = false; }, 500);
     }
@@ -123,85 +123,87 @@ export default function MenuScreen({ route, navigation }) {
     [basketLines],
   );
 
+  const art = foodType(`${restaurant?.name ?? ''} ${restaurant?.cuisine_type ?? ''}`);
+  const bannerW = width - 36;
+
   return (
     <View style={s.root}>
       {/* header */}
       <View style={[s.header, { paddingTop: insets.top + 4 }]}>
-        <View style={s.headerLeft}>
-          <RoundBtn onPress={() => navigation.goBack()} size={40}><Icon name="back" s={20} c={T.ink} /></RoundBtn>
-          <Text style={s.title} numberOfLines={1}>{restaurant?.name ?? 'Menü'}</Text>
-        </View>
-        <RoundBtn onPress={() => setFav((f) => !f)} size={40}>
-          <Icon name="heart" s={20} c={fav ? T.coral : T.ink} sw={fav ? 0 : 1.9} />
-        </RoundBtn>
+        <RoundBtn onPress={() => navigation.goBack()} size={44} accessibilityLabel="Geri"><Icon name="back" s={20} c={T.ink} /></RoundBtn>
+        <Text style={s.headTitle}>Menü</Text>
+        <RoundBtn onPress={() => count && navigation.navigate('Basket')} size={44} badge={count > 0}><Icon name="bag" s={20} c={T.ink} /></RoundBtn>
       </View>
 
-      {/* category chips (scroll-spy) */}
-      {!loading && !error && sections.length > 0 ? (
-        <View style={s.tabsWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsRow}>
-            {sections.map(({ cat }) => {
-              const active = cat === tab;
-              return (
-                <Pressable key={cat} onPress={() => jumpTo(cat)} style={[s.tab, active && s.tabActive]}>
-                  <Text style={[s.tabText, active && s.tabTextActive]} numberOfLines={1}>{cat}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      ) : null}
-
       {loading ? (
-        <View style={s.center}><ActivityIndicator size="large" color={T.blue} /></View>
+        <View style={s.center}><Mascot pose="deal-search" size={110} /><Text style={s.stateTitle}>Menü yükleniyor…</Text><ActivityIndicator color={T.ink} style={{ marginTop: 10 }} /></View>
       ) : error && items.length === 0 ? (
         <View style={s.center}>
-          <Text style={s.errText}>{error}</Text>
-          <Pressable onPress={load} style={s.retry}><Text style={s.retryText}>Tekrar dene</Text></Pressable>
+          <Mascot pose="no-results" size={110} />
+          <Text style={s.stateTitle}>Menü şu an yüklenemedi.</Text>
+          <Text style={s.stateText}>Bağlantını kontrol edip tekrar dene.</Text>
+          <PrimaryButton onPress={load} style={s.stateBtn}>Tekrar dene</PrimaryButton>
         </View>
       ) : items.length === 0 ? (
-        <View style={s.center}><Text style={s.empty}>Menü bulunamadı</Text></View>
+        <View style={s.center}><Mascot pose="no-results" size={110} /><Text style={s.stateTitle}>Bu restoranın menüsü henüz yok.</Text></View>
       ) : (
         <ScrollView
           ref={scrollRef}
           onScroll={onScroll}
           scrollEventThrottle={32}
+          stickyHeaderIndices={[1]}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: count ? 160 : 110 }}
+          contentContainerStyle={{ paddingBottom: count ? 170 : 110 }}
         >
-          {sections.map((sec) => (
-            <View key={sec.cat} onLayout={(e) => { sectionY.current[sec.cat] = e.nativeEvent.layout.y; }}>
-              <View style={s.secHead}>
-                <Text style={s.secTitle}>{sec.cat}</Text>
-                <Text style={s.secCount}>{sec.items.length} ürün</Text>
-                <View style={s.secRule} />
-              </View>
-              {sec.items.map((it) => {
-                const qty = basket[it.id]?.qty ?? 0;
-                const active = qty > 0;
-                return (
-                  <Pressable
-                    key={String(it.id)}
-                    onPress={() => addItem(it, qty)}
-                    disabled={busyId === it.id}
-                    style={({ pressed }) => [s.itemCard, active && s.itemCardActive, pressed && s.itemPressed]}
-                  >
-                    <View style={s.thumb}>
-                      <Food name={foodIconFor(it.name, it.category)} s={44} />
-                      {qty > 0 ? (
-                        <View style={s.thumbBadge}><Text style={s.thumbBadgeText}>{qty}</Text></View>
-                      ) : null}
-                    </View>
-                    <View style={s.itemMeta}>
-                      <Text style={s.itemName} numberOfLines={2}>{it.name}</Text>
-                      {it.price != null ? <Text style={s.itemPrice}>{money(it.price)}</Text> : null}
-                    </View>
-                    <View style={s.addBtn}><Icon name="plus" s={19} c="#fff" sw={2.6} /></View>
-                  </Pressable>
-                );
-              })}
+          <View style={s.top}>
+            <FoodArt type={art} size={bannerW} height={Math.round(bannerW * 0.36)} round={false} radius={20} />
+            <View style={s.nameRow}>
+              <Title accent="Menünü seç." style={s.name}>{restaurant?.name ?? 'Menü'}</Title>
+              {count > 0 ? <View style={s.countPill}><Text style={s.countPillText}>{count} ürün</Text></View> : null}
             </View>
-          ))}
+            <Text style={s.priceNote}>Listedeki fiyat bir platformda son görülen fiyattır; her platformun toplamı karşılaştırmada ayrı hesaplanır.</Text>
+          </View>
+
+          {/* category chips (scroll-spy), sticky under the header */}
+          <View style={s.tabsWrap}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsRow}>
+              {sections.map(({ cat }) => <Chip key={cat} label={cat} active={cat === tab} onPress={() => jumpTo(cat)} />)}
+            </ScrollView>
+          </View>
+
+          <View onLayout={(e) => { listY.current = e.nativeEvent.layout.y; }} style={{ paddingHorizontal: 18 }}>
+            {sections.map((sec) => (
+              <View key={sec.cat} onLayout={(e) => { sectionY.current[sec.cat] = listY.current + e.nativeEvent.layout.y; }}>
+                <Text style={s.secTitle}>{sec.cat}</Text>
+                {sec.items.map((it) => {
+                  const qty = basket[it.id]?.qty ?? 0;
+                  return (
+                    <View key={String(it.id)} style={s.item}>
+                      <View style={s.itemMeta}>
+                        <Text style={s.itemName} numberOfLines={2}>{it.name}</Text>
+                        {it.price != null ? <Text style={s.itemPrice}>{money(it.price)}</Text> : null}
+                        {basket[it.id]?.options?.summary ? <Text style={s.itemOpts} numberOfLines={2}>{basket[it.id].options.summary}</Text> : null}
+                      </View>
+                      <View style={s.thumb}>
+                        <FoodArt type={foodType(`${it.name} ${it.category ?? ''}`, art)} size={96} round={false} radius={14} />
+                        {qty > 0 ? (
+                          <View style={s.stepper}>
+                            <Pressable hitSlop={6} onPress={() => setQty(it, qty - 1)} style={s.stepBtn} accessibilityLabel={`${it.name} azalt`}><Icon name="minus" s={16} c={T.ink} /></Pressable>
+                            <Text style={s.stepQty}>{qty}</Text>
+                            <Pressable hitSlop={6} onPress={() => addItem(it, qty)} style={s.stepBtn} accessibilityLabel={`${it.name} artır`}><Icon name="plus" s={16} c={T.ink} /></Pressable>
+                          </View>
+                        ) : (
+                          <Pressable onPress={() => addItem(it, 0)} disabled={busyId === it.id} style={s.addBtn} accessibilityLabel={`${it.name} ekle`}>
+                            {busyId === it.id ? <ActivityIndicator color="#fff" size="small" /> : <Icon name="plus" s={20} c="#fff" sw={2.2} />}
+                          </Pressable>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
         </ScrollView>
       )}
 
@@ -212,19 +214,14 @@ export default function MenuScreen({ route, navigation }) {
           onSave={(opts) => { setQty(sheet.item, 1, opts); setSheet(null); }} />
       ) : null}
 
-      {/* bottom basket bar → review */}
+      {/* bottom basket bar -> review */}
       {count > 0 && !loading ? (
         <View style={[s.barWrap, { paddingBottom: insets.bottom + 12 }]}>
-          <Pressable
-            onPress={() => navigation.navigate('Basket')}
-            style={({ pressed }) => [s.bar, pressed && s.barDim]}
-          >
-            <View style={s.barLeft}>
-              <View style={s.barCount}><Text style={s.barCountText}>{count}</Text></View>
-              <Text style={s.barLabel}>ürün · Sepeti incele</Text>
-            </View>
-            <Text style={s.barTotal}>{money(total)}</Text>
-          </Pressable>
+          <View style={s.barInfo}>
+            <Text style={s.barLabel}>Sepetim</Text>
+            <Text style={s.barLabel}>{count} ürün · {money(total)}</Text>
+          </View>
+          <PrimaryButton onPress={() => navigation.navigate('Basket')}>Sepeti incele</PrimaryButton>
         </View>
       ) : null}
     </View>
@@ -234,54 +231,40 @@ export default function MenuScreen({ route, navigation }) {
 const s = StyleSheet.create({
   root:       { flex: 1, backgroundColor: T.bg },
 
-  header:     { paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
-  title:      { fontSize: 20, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.4, flexShrink: 1 },
+  header:     { paddingHorizontal: 18, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headTitle:  { fontSize: 17, fontFamily: font.bold, color: T.ink, letterSpacing: -0.3 },
 
-  tabsWrap:   { paddingBottom: 12 },
+  top:        { paddingHorizontal: 18, paddingTop: 6 },
+  nameRow:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginTop: 18 },
+  name:       { flexShrink: 1, fontFamily: font.bold, letterSpacing: -1.3 },
+  countPill:  { backgroundColor: T.yellow, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 11, marginTop: 6 },
+  countPillText: { fontSize: 12.5, fontFamily: font.semibold, color: T.ink },
+  priceNote:  { fontSize: 12, fontFamily: font.regular, color: T.sub, marginTop: 8, lineHeight: 17 },
+
+  tabsWrap:   { backgroundColor: T.bg, paddingVertical: 12 },
   tabsRow:    { paddingHorizontal: 18, gap: 8 },
-  tab:        { paddingVertical: 9, paddingHorizontal: 16, borderRadius: 999, backgroundColor: T.white, borderWidth: 1, borderColor: T.line2 },
-  tabActive:  { backgroundColor: T.navy, borderColor: T.navy },
-  tabText:    { fontSize: 13, fontFamily: font.bold, color: T.sub },
-  tabTextActive: { color: '#fff' },
 
   center:     { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  empty:      { fontSize: 14, fontFamily: font.semibold, color: T.faint },
-  errText:    { fontSize: 14, fontFamily: font.semibold, color: T.coral, textAlign: 'center' },
-  errBanner:  { fontSize: 12.5, fontFamily: font.semibold, color: T.coral, textAlign: 'center', paddingHorizontal: 20, paddingBottom: 6 },
-  retry:      { marginTop: 14, paddingVertical: 10, paddingHorizontal: 22 },
-  retryText:  { fontSize: 14, fontFamily: font.bold, color: T.blue },
+  stateTitle: { fontSize: 19, fontFamily: font.medium, color: T.ink, marginTop: 14, textAlign: 'center', letterSpacing: -0.4 },
+  stateText:  { fontSize: 13.5, fontFamily: font.regular, color: T.sub, marginTop: 6, textAlign: 'center' },
+  stateBtn:   { marginTop: 18, width: 'auto', paddingHorizontal: 26 },
+  errBanner:  { fontSize: 12.5, fontFamily: font.semibold, color: T.red, textAlign: 'center', paddingHorizontal: 20, paddingBottom: 6 },
 
-  secHead:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 16, paddingBottom: 12, paddingHorizontal: 2 },
-  secTitle:   { fontSize: 17, fontFamily: font.extrabold, color: T.ink, letterSpacing: -0.2 },
-  secCount:   { fontSize: 12, fontFamily: font.bold, color: T.faint },
-  secRule:    { flex: 1, height: 1, backgroundColor: T.line },
-
-  itemCard:   {
-    flexDirection: 'row', alignItems: 'center', gap: 13,
-    backgroundColor: T.white, borderRadius: 18, padding: 13, marginBottom: 11,
-    borderWidth: 1, borderColor: T.line,
-  },
-  itemCardActive: { borderWidth: 1.5, borderColor: T.blue },
-  itemPressed:    { opacity: 0.75 },
-  thumb:      { width: 62, height: 62, borderRadius: 15, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' },
-  thumbBadge: {
-    position: 'absolute', top: -6, right: -6, minWidth: 20, height: 20, paddingHorizontal: 5,
-    borderRadius: 999, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: T.white,
-  },
-  thumbBadgeText: { fontSize: 11, fontFamily: font.extrabold, color: '#fff' },
+  secTitle:   { fontSize: 13, fontFamily: font.semibold, color: T.sub, letterSpacing: 1.2, textTransform: 'uppercase', paddingTop: 14, paddingBottom: 4 },
+  item:       { flexDirection: 'row', gap: 16, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: T.line },
   itemMeta:   { flex: 1, minWidth: 0 },
-  itemName:   { fontSize: 14.5, fontFamily: font.extrabold, color: T.ink, lineHeight: 19 },
-  itemPrice:  { fontSize: 14, fontFamily: font.extrabold, color: T.ink, marginTop: 7 },
-  addBtn:     { width: 34, height: 34, borderRadius: 11, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center' },
+  itemName:   { fontSize: 16, fontFamily: font.bold, color: T.ink, lineHeight: 21, letterSpacing: -0.3 },
+  itemPrice:  { fontSize: 15, fontFamily: font.semibold, color: T.ink, marginTop: 8 },
+  itemOpts:   { fontSize: 12, fontFamily: font.regular, color: T.sub, marginTop: 6 },
+  thumb:      { width: 96, height: 96 },
+  addBtn:     { position: 'absolute', right: -6, bottom: -8, width: 38, height: 38, borderRadius: 19, backgroundColor: T.ink,
+                alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: T.bg },
+  stepper:    { position: 'absolute', left: -10, right: -6, bottom: -10, height: 38, borderRadius: 19, backgroundColor: T.white,
+                borderWidth: 1, borderColor: T.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 6 },
+  stepBtn:    { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  stepQty:    { fontSize: 15, fontFamily: font.bold, color: T.ink },
 
-  barWrap:    { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16 },
-  bar:        { backgroundColor: T.navy, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  barDim:     { opacity: 0.9 },
-  barLeft:    { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
-  barCount:   { minWidth: 24, height: 24, borderRadius: 8, backgroundColor: T.blue, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  barCountText: { fontSize: 13, fontFamily: font.extrabold, color: '#fff' },
-  barLabel:   { fontSize: 15, fontFamily: font.extrabold, color: '#fff', flexShrink: 1 },
-  barTotal:   { fontSize: 17, fontFamily: font.extrabold, color: '#fff' },
+  barWrap:    { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingTop: 12, backgroundColor: T.bg, borderTopWidth: 1, borderTopColor: T.line },
+  barInfo:    { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  barLabel:   { fontSize: 14, fontFamily: font.regular, color: T.ink },
 });

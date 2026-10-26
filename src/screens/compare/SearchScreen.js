@@ -1,66 +1,57 @@
-// SearchScreen — navy/gold rebuild, wired live.
-// Lists the in-scope restaurants from /restaurants; the search box filters
-// that list client-side. No fabricated ratings — the backend returns none,
-// so we show a chevron instead.
+// SearchScreen — Doybi redesign PR 2 (design 02 "Bir lezzet bulalım").
+// Lists every restaurant /restaurants returns (the backend already hides inert
+// and still-onboarding ones), most-covered first. Search and the food chips
+// filter client-side. Food art is our own generic illustration, never a
+// restaurant's product photo; no ratings are shown because none exist.
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { T, font } from '../../theme/tokens';
-import { Screen, Card, Header, SectionHead } from '../../components/ui';
+import { Screen, Chip, Title, PrimaryButton } from '../../components/ui';
 import { Icon } from '../../components/icons';
-import Food from '../../components/Food';
-import { restaurantTile } from '../../lib/brand';
+import { FoodArt, Mascot, foodType } from '../../components/Art';
 import { getRestaurants } from '../../api/client';
 import { track } from '../../lib/telemetry';
 
-// Scope guard: the 10 restaurants with real scraped price data, matched on
-// exact backend slug (never on name — apostrophes and Turkish İ/ı/ü make
-// name matching fragile). Anything else (e.g. Komagene) stays hidden.
-// Note: burgerking has NO hyphen; all other multi-word slugs are hyphenated.
-const IN_SCOPE_SLUGS = new Set([
-  'mcdonalds', 'burgerking', 'cajun-corner', 'popeyes', 'kofteci-yusuf',
-  'tavuk-dunyasi', 'usta-donerci', 'maydonoz-doner', 'dominos', 'pizza-bulls',
-]);
-const inScope = (r) => IN_SCOPE_SLUGS.has(r?.slug);
+// Platforms no longer scraped; their old rows must not count as coverage.
+const RETIRED = new Set(['Getir Yemek']);
+// Never shown even if a stale build of the backend returns it (inert POC).
+const HIDDEN_SLUGS = new Set(['komagene']);
 
-// Glyph for a REAL menu_items.category label. Returns null for promo/combo
-// categories (Menüler, Coca-Cola Fırsat Menüleri, Happy Meal, Çocuk Menüleri…)
-// that have no clean food type — those are skipped, never shown as junk tiles.
-// Every glyph maps to a corrected icon from the swapped set (Fix 1).
-const categoryFood = (c) => {
-  const n = String(c).toLowerCase();
-  if (n.includes('burger'))                          return 'burger';
-  if (n.includes('dürüm') || n.includes('durum') || n.includes('wrap') || n.includes('döner') || n.includes('doner')) return 'wrap';
-  if (n.includes('köfte') || n.includes('kofte'))    return 'sandwich';
-  if (n.includes('tavuk') || n.includes('chicken') || n.includes('nugget')) return 'chicken';
-  if (n.includes('pizza'))                           return 'pizza';
-  if (n.includes('kahve') || n.includes('coffee'))   return 'coffee';
-  if (n.includes('çecek') || n.includes('icecek'))   return 'drink'; // İçecekler (Turkish İ→dotted i, match on çecek)
-  if (n.includes('dondurma') || n.includes('ice'))   return 'ice-cream';
-  if (n.includes('tatlı') || n.includes('tatli') || n.includes('dessert')) return 'cake';
-  if (n.includes('sos'))                             return 'hot-sauce';
-  if (n.includes('patates') || n.includes('atıştır') || n.includes('atistir') || n.includes('yan ürün') || n.includes('yan urun')) return 'fries';
-  if (n.includes('salata') || n.includes('salad'))   return 'salad';
-  if (n.includes('çorba') || n.includes('corba') || n.includes('soup')) return 'soup';
-  if (n.includes('balık') || n.includes('balik') || n.includes('fish')) return 'fish';
-  return null; // promo / combo / generic "Menüler" — no clean food type
-};
+const CHIPS = [
+  { value: 'all', label: 'Tümü' },
+  { value: 'burger', label: 'Burger' },
+  { value: 'pizza', label: 'Pizza' },
+  { value: 'chicken', label: 'Tavuk' },
+  { value: 'wrap', label: 'Dürüm' },
+];
+
+const fold = (v) => String(v || '').toLocaleLowerCase('tr-TR');
 
 export default function SearchScreen({ navigation }) {
   const [all, setAll]         = useState([]);
   const [q, setQ]             = useState('');
+  const [type, setType]       = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const mounted               = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
+  const cardW = Math.floor((useWindowDimensions().width - 40 - 12) / 2);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await getRestaurants();
-      if (mounted.current) setAll((data || []).filter(inScope));
+      const rows = (data || []).filter((r) => !HIDDEN_SLUGS.has(r.slug)).map((r) => {
+        const names = new Set();
+        for (const it of r.menu_items || []) for (const p of it.prices || []) {
+          if (p.platform?.name && !RETIRED.has(p.platform.name)) names.add(p.platform.name);
+        }
+        return { ...r, platformCount: names.size, food: foodType(`${r.name} ${r.cuisine_type || ''}`) };
+      }).sort((a, b) => b.platformCount - a.platformCount || a.name.localeCompare(b.name, 'tr'));
+      if (mounted.current) setAll(rows);
     } catch {
-      if (mounted.current) setError('Restoranlar yüklenemedi. Bağlantını kontrol et.');
+      if (mounted.current) setError(true);
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -68,35 +59,18 @@ export default function SearchScreen({ navigation }) {
   useEffect(() => { load(); }, [load]);
 
   const list = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return all;
+    const needle = fold(q.trim());
     return all.filter((r) =>
-      String(r.name).toLowerCase().includes(needle) ||
-      String(r.cuisine_type || '').toLowerCase().includes(needle));
-  }, [all, q]);
-
-  // Real menu_items.category values from in-scope restaurants, mapped to food
-  // glyphs and deduped by glyph (one tile per food type; first real category
-  // label that maps to it wins). Promo/combo categories that don't map to a
-  // clean food type are skipped — no invented categories, no junk tiles.
-  const categories = useMemo(() => {
-    const byGlyph = new Map(); // glyph -> first real label
-    for (const r of all) {
-      for (const it of r.menu_items || []) {
-        const food = categoryFood(it.category);
-        if (food && !byGlyph.has(food)) byGlyph.set(food, it.category);
-      }
-    }
-    return [...byGlyph.entries()].map(([food, label]) => ({ label, food }));
-  }, [all]);
+      (type === 'all' || r.food === type) &&
+      (!needle || fold(r.name).includes(needle) || fold(r.cuisine_type).includes(needle)));
+  }, [all, q, type]);
 
   const pick = useCallback((r) => {
     track({ event_name: 'restaurant_view', restaurant_id: r.id, source: 'search' });
     navigation.navigate('Menu', { restaurant: r });
   }, [navigation]);
 
-  // T-027: a settled search (1.5s after typing stops) — normalised server-side;
-  // zero-result searches are the "unserved demand" signal.
+  // T-027: a settled search (1.5s after typing stops); zero results = unserved demand.
   useEffect(() => {
     const needle = q.trim();
     if (needle.length < 2 || loading) return undefined;
@@ -104,107 +78,119 @@ export default function SearchScreen({ navigation }) {
     return () => clearTimeout(t);
   }, [q, list.length, loading]);
 
+  const clear = () => { setQ(''); setType('all'); };
+
   return (
     <Screen>
-      <Header title="Restoran veya mutfak ara" />
-
-      <View style={s.searchRow}>
-        <View style={s.searchBox}>
-          <Icon name="search" s={19} c={T.faint} />
-          <TextInput
-            value={q}
-            onChangeText={setQ}
-            placeholder="Restoran, yemek veya mutfak…"
-            placeholderTextColor={T.faint}
-            style={s.input}
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {q.length > 0 ? (
-            <Pressable hitSlop={8} onPress={() => setQ('')}><Icon name="x" s={16} c={T.faint} /></Pressable>
-          ) : null}
-        </View>
+      <View style={s.head}>
+        <Title accent="bulalım.">Bir lezzet</Title>
+        <Text style={s.lead}>Restoranını seç, platform fiyatlarını karşılaştır.</Text>
       </View>
 
+      <View style={s.searchBox}>
+        <Icon name="search" s={20} c={T.ink} />
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          placeholder="Restoran veya mutfak ara"
+          placeholderTextColor={T.sub}
+          style={s.input}
+          autoCorrect={false}
+          returnKeyType="search"
+          accessibilityLabel="Restoran ara"
+        />
+        {q.length > 0 ? (
+          <Pressable hitSlop={10} onPress={() => setQ('')} accessibilityLabel="Aramayı temizle"><Icon name="x" s={16} c={T.sub} /></Pressable>
+        ) : null}
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+        {CHIPS.map((c) => <Chip key={c.value} label={c.label} active={type === c.value} onPress={() => setType(c.value)} />)}
+      </ScrollView>
+
       <View style={s.section}>
-        <SectionHead title="Restoranlar" />
+        <View style={s.sectionHead}>
+          <Text style={s.sectionTitle}>Restoranlar</Text>
+          {!loading && !error ? <Text style={s.sectionCount}>{list.length}</Text> : null}
+        </View>
+
         {loading ? (
-          <Card style={s.stateCard}><ActivityIndicator color={T.blue} /></Card>
+          <View style={s.state}><Mascot pose="deal-search" size={110} /><Text style={s.stateTitle}>Restoranlar yükleniyor…</Text><ActivityIndicator color={T.ink} style={{ marginTop: 10 }} /></View>
         ) : error ? (
-          <Card style={s.stateCard}>
-            <Text style={s.errText}>{error}</Text>
-            <Pressable onPress={load} style={s.retry}><Text style={s.retryText}>Tekrar dene</Text></Pressable>
-          </Card>
+          <View style={s.state}>
+            <Mascot pose="no-results" size={110} />
+            <Text style={s.stateTitle}>Restoranlar şu an yüklenemedi.</Text>
+            <Text style={s.stateText}>Bağlantını kontrol edip tekrar dene.</Text>
+            <PrimaryButton onPress={load} style={s.stateBtn}>Tekrar dene</PrimaryButton>
+          </View>
         ) : list.length === 0 ? (
-          <Card style={s.stateCard}><Text style={s.empty}>Sonuç bulunamadı</Text></Card>
+          <View style={s.state}>
+            <Mascot pose="no-results" size={110} />
+            <Text style={s.stateTitle}>Bununla eşleşen restoran yok.</Text>
+            <Text style={s.stateText}>Başka bir ad dene ya da filtreyi kaldır.</Text>
+            <PrimaryButton onPress={clear} bg={T.white} fg={T.ink} style={[s.stateBtn, s.ghost]}>Filtreleri temizle</PrimaryButton>
+          </View>
         ) : (
-          <Card pad={0}>
-            {list.map((r, i) => (
+          <View style={s.grid}>
+            {list.map((r) => (
               <Pressable
                 key={String(r.id)}
                 onPress={() => pick(r)}
-                style={({ pressed }) => [s.row, i ? s.rowBorder : null, pressed && s.rowPressed]}
+                style={({ pressed }) => [s.card, { width: cardW }, pressed && { opacity: 0.85 }]}
+                accessibilityRole="button"
+                accessibilityLabel={`${r.name}, ${r.platformCount} platform`}
               >
-                {(() => { const t = restaurantTile(r); return (
-                  <View style={[s.rTile, { backgroundColor: t.bg }]}><Food name={t.food} s={28} /></View>
-                ); })()}
-                <View style={s.rowMeta}>
-                  <Text style={s.rowName} numberOfLines={1}>{r.name}</Text>
-                  {r.cuisine_type ? <Text style={s.rowSub} numberOfLines={1}>{r.cuisine_type}</Text> : null}
+                <FoodArt type={r.food} size={cardW} height={Math.round(cardW * 0.62)} round={false} radius={0} />
+                <View style={s.cardBody}>
+                  <Text style={s.cardName} numberOfLines={1}>{r.name}</Text>
+                  <View style={s.cardFoot}>
+                    <Text style={s.cardSub} numberOfLines={1}>
+                      {r.platformCount > 1 ? `${r.platformCount} platform` : 'Menüyü incele'}
+                    </Text>
+                    <Icon name="arrow" s={16} c={T.ink} sw={1.8} />
+                  </View>
                 </View>
-                <Icon name="chevR" s={18} c={T.faint} sw={2.2} />
               </Pressable>
             ))}
-          </Card>
-        )}
-      </View>
-
-      {!loading && !error && categories.length > 0 ? (
-        <View style={s.section}>
-          <SectionHead title="Kategoriler" />
-          <View style={s.cuisineGrid}>
-            {categories.map((c) => (
-              <View key={c.food} style={s.cuisineTile}>
-                <View style={s.cuisineIcon}><Food name={c.food} s={34} /></View>
-                <Text style={s.cuisineLabel} numberOfLines={1}>{c.label}</Text>
-              </View>
-            ))}
           </View>
-        </View>
-      ) : null}
+        )}
+        {!loading && !error && list.length ? (
+          <View style={s.note}>
+            <Icon name="help" s={15} c={T.sub} />
+            <Text style={s.noteText}>Görseller temsilidir. Fiyatlar platformların herkese açık sayfalarından okunur.</Text>
+          </View>
+        ) : null}
+      </View>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  searchRow:  { paddingHorizontal: 20, paddingTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  searchBox:  {
-    flex: 1,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: T.white, borderRadius: 14, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: T.line2,
-  },
-  filterBtn:  { borderRadius: 14 },
-  input:      { flex: 1, fontFamily: font.semibold, fontSize: 14, color: T.ink, paddingVertical: 13 },
+  head:        { paddingHorizontal: 20, paddingTop: 10 },
+  lead:        { fontSize: 14, fontFamily: font.regular, color: T.sub, marginTop: 8 },
+  searchBox:   { marginHorizontal: 20, marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 12,
+                 backgroundColor: '#EDEDE6', borderRadius: 16, paddingHorizontal: 16 },
+  input:       { flex: 1, fontFamily: font.regular, fontSize: 15, color: T.ink, paddingVertical: 14 },
+  chips:       { paddingHorizontal: 20, paddingTop: 16, gap: 8 },
 
-  section:    { paddingHorizontal: 20, paddingTop: 24 },
+  section:     { paddingHorizontal: 20, paddingTop: 26 },
+  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 },
+  sectionTitle:{ fontSize: 19, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5 },
+  sectionCount:{ fontSize: 12, fontFamily: font.medium, color: T.sub },
 
-  rTile:      { width: 46, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  row:        { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 16 },
-  rowBorder:  { borderTopWidth: 1, borderTopColor: T.line },
-  rowPressed: { opacity: 0.6 },
-  rowMeta:    { flex: 1, minWidth: 0 },
-  rowName:    { fontSize: 15, fontFamily: font.extrabold, color: T.ink },
-  rowSub:     { fontSize: 12.5, fontFamily: font.semibold, color: T.sub, marginTop: 2 },
+  grid:        { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  card:        { backgroundColor: T.white, borderRadius: 16, borderWidth: 1, borderColor: T.line, overflow: 'hidden' },
+  cardBody:    { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 12 },
+  cardName:    { fontSize: 15, fontFamily: font.bold, color: T.ink, letterSpacing: -0.3 },
+  cardFoot:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 5 },
+  cardSub:     { fontSize: 12.5, fontFamily: font.regular, color: T.sub, flexShrink: 1 },
 
-  cuisineGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  cuisineTile:  { width: '22%', alignItems: 'center' },
-  cuisineIcon:  { width: '100%', aspectRatio: 1, backgroundColor: T.white, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: T.line },
-  cuisineLabel: { fontSize: 11.5, fontFamily: font.bold, color: T.sub, marginTop: 8 },
+  state:       { alignItems: 'center', paddingVertical: 26, paddingHorizontal: 10 },
+  stateTitle:  { fontSize: 19, fontFamily: font.medium, color: T.ink, marginTop: 14, textAlign: 'center', letterSpacing: -0.4 },
+  stateText:   { fontSize: 13.5, fontFamily: font.regular, color: T.sub, marginTop: 6, textAlign: 'center' },
+  stateBtn:    { marginTop: 18, width: 'auto', paddingHorizontal: 26 },
+  ghost:       { borderWidth: 1, borderColor: T.line },
 
-  stateCard:  { alignItems: 'center', paddingVertical: 28 },
-  empty:      { fontSize: 13.5, fontFamily: font.semibold, color: T.faint },
-  errText:    { fontSize: 13.5, fontFamily: font.semibold, color: T.coral, textAlign: 'center' },
-  retry:      { marginTop: 12, paddingVertical: 8, paddingHorizontal: 18 },
-  retryText:  { fontSize: 14, fontFamily: font.bold, color: T.blue },
+  note:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18 },
+  noteText:    { flex: 1, fontSize: 12, fontFamily: font.regular, color: T.sub, lineHeight: 17 },
 });

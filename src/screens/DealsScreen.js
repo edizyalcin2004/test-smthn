@@ -42,6 +42,7 @@ function eligibility(c) {
   if (c.usage_limit === 'first_order') return 'İlk siparişe özel';
   if (c.requires_membership) return 'Üyelik gerekir';
   if (c.usage_limit === 'once_per_user') return 'Kişi başı 1 kez';
+  if (c.usage_limit && c.usage_limit !== 'unlimited') return String(c.usage_limit); // e.g. Migros "Koşullar platformda"
   return null;
 }
 
@@ -123,6 +124,11 @@ export default function DealsScreen() {
 }
 
 function CodesView({ codes, openCode }) {
+  // Migros store coupons alone can be a few hundred cards, so the list gets
+  // platform chips (built from live data) like Özel menüler.
+  const [plat, setPlat] = useState('Tümü');
+  const plats = useMemo(() => ['Tümü', ...new Set(codes.map((c) => c.platform?.name).filter(Boolean))], [codes]);
+  const shown = plat === 'Tümü' ? codes : codes.filter((c) => c.platform?.name === plat);
   return (
     <View style={s.body}>
       <View style={s.callout}>
@@ -134,13 +140,18 @@ function CodesView({ codes, openCode }) {
       </View>
 
       <Text style={s.sectionTitle}>Kodları keşfet</Text>
-      {codes.length === 0 ? (
+      {plats.length > 2 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.codeChips}>
+          {plats.map((p) => <Chip key={p} label={p} active={plat === p} onPress={() => setPlat(p)} />)}
+        </ScrollView>
+      ) : null}
+      {shown.length === 0 ? (
         <View style={s.state}>
           <Mascot pose="no-results" size={100} />
           <Text style={s.stateTitle}>Şu an aktif kod yok.</Text>
           <Text style={s.stateText}>Platformlar yeni kod yayınladığında burada göreceksin.</Text>
         </View>
-      ) : codes.map((c) => {
+      ) : shown.map((c) => {
         const left = timeLeft(c.expiry_date);
         const who = eligibility(c);
         return (
@@ -149,7 +160,7 @@ function CodesView({ codes, openCode }) {
               <View style={s.codeIcon}><Icon name="tag" s={22} c={T.ink} /></View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.code} numberOfLines={2}>{c.code || c.title}</Text>
-                <Text style={s.codeSub} numberOfLines={1}>{c.platform?.name} · {discountText(c)}</Text>
+                <Text style={s.codeSub} numberOfLines={1}>{[c.restaurant_name, c.platform?.name, discountText(c)].filter(Boolean).join(' · ')}</Text>
               </View>
               <Icon name="chevR" s={18} c={T.ink} sw={1.9} />
             </View>
@@ -262,6 +273,7 @@ const s = StyleSheet.create({
   calloutTitle: { fontSize: 18, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5 },
   calloutText:  { fontSize: 13, fontFamily: font.regular, color: T.sub, marginTop: 6, lineHeight: 18 },
   sectionTitle: { fontSize: 19, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5, marginTop: 26, marginBottom: 14 },
+  codeChips:    { gap: 8, paddingBottom: 14 },
 
   codeCard:     { backgroundColor: T.white, borderRadius: 18, borderWidth: 1, borderColor: T.line, marginBottom: 12, overflow: 'hidden' },
   codeTop:      { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },

@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Linking, Alert, useWindowDimensions } from 'react-native';
 import { PressScale, Reveal } from '../lib/motion';
+import { groupCodes } from '../lib/codeGroups';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, font, money } from '../theme/tokens';
@@ -151,28 +152,58 @@ function CodesView({ codes, openCode }) {
           <Text style={s.stateTitle}>Şu an aktif kod yok.</Text>
           <Text style={s.stateText}>Platformlar yeni kod yayınladığında burada göreceksin.</Text>
         </View>
-      ) : shown.map((c) => {
-        const left = timeLeft(c.expiry_date);
-        const who = eligibility(c);
-        return (
-          <PressScale key={String(c.id)} onPress={() => openCode(c)} style={s.codeCard} accessibilityRole="button">
-            <View style={s.codeTop}>
-              <View style={s.codeIcon}><Icon name="tag" s={22} c={T.ink} /></View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.code} numberOfLines={2}>{c.code || c.title}</Text>
-                <Text style={s.codeSub} numberOfLines={1}>{[c.restaurant_name, c.platform?.name, discountText(c)].filter(Boolean).join(' · ')}</Text>
-              </View>
-              <Icon name="chevR" s={18} c={T.ink} sw={1.9} />
-            </View>
-            <View style={s.codeFoot}>
-              <Text style={s.codeFootText}>{c.minimum_order != null ? `Min. ${money(num(c.minimum_order))}` : 'Alt limit yok'}</Text>
-              <Text style={s.codeFootText} numberOfLines={1}>{[who, left].filter(Boolean).join(' · ')}</Text>
-            </View>
-          </PressScale>
-        );
-      })}
+      ) : groupCodes(shown).map((g) => <CodeGroupCard key={g.key} g={g} openCode={openCode} />)}
       <Note>Kodlar platformların herkese açık kampanya sayfalarından okunur. Son geçerlilik her zaman platformda kontrol edilir.</Note>
     </View>
+  );
+}
+
+function CodeGroupCard({ g, openCode }) {
+  const [open, setOpen] = useState(false);
+  const c = g.kind === 'restaurant' ? g.best : g.code;
+  const left = timeLeft(c.expiry_date);
+  const who = eligibility(c);
+  const title = g.kind === 'restaurant' ? (c.restaurant_name || c.title) : (c.code || c.title);
+  const sub = g.kind === 'campaign'
+    ? `${c.platform?.name} · ${g.places.length} restoranda`
+    : g.kind === 'restaurant'
+      ? [c.platform?.name, c.title].filter(Boolean).join(' · ')
+      : [c.restaurant_name, c.platform?.name, discountText(c)].filter(Boolean).join(' · ');
+  const more = g.kind === 'campaign' ? g.places.length : g.kind === 'restaurant' ? g.others.length : 0;
+  const onPress = g.kind === 'code' || more === 0 ? () => openCode(c) : () => setOpen((o) => !o);
+  return (
+    <PressScale onPress={onPress} style={s.codeCard} accessibilityRole="button" accessibilityState={{ expanded: open }}>
+      <View style={s.codeTop}>
+        <View style={s.codeIcon}><Icon name="tag" s={22} c={T.ink} /></View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.code} numberOfLines={2}>{title}</Text>
+          <Text style={s.codeSub} numberOfLines={1}>{sub}</Text>
+        </View>
+        <Icon name={more ? 'chevD' : 'chevR'} s={18} c={T.ink} sw={1.9} />
+      </View>
+      {open && g.kind === 'campaign' ? (
+        <View style={s.groupList}>
+          <Text style={s.groupText}>{g.places.join(' · ')}</Text>
+          <Pressable onPress={() => openCode(c)} hitSlop={6}><Text style={s.groupLink}>Koşulları gör</Text></Pressable>
+        </View>
+      ) : null}
+      {open && g.kind === 'restaurant' ? (
+        <View style={s.groupList}>
+          {[g.best, ...g.others].map((o) => (
+            <Pressable key={String(o.id)} onPress={() => openCode(o)} style={s.groupRow} hitSlop={4}>
+              <Text style={s.groupText} numberOfLines={1}>{o.title}</Text>
+              <Text style={s.groupMeta}>{eligibility(o) || ''}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      <View style={s.codeFoot}>
+        <Text style={s.codeFootText}>
+          {g.kind === 'restaurant' && more ? `${more + 1} kupon` : c.minimum_order != null ? `Min. ${money(num(c.minimum_order))}` : 'Alt limit yok'}
+        </Text>
+        <Text style={s.codeFootText} numberOfLines={1}>{[who, left].filter(Boolean).join(' · ')}</Text>
+      </View>
+    </PressScale>
   );
 }
 
@@ -274,6 +305,11 @@ const s = StyleSheet.create({
   calloutText:  { fontSize: 13, fontFamily: font.regular, color: T.sub, marginTop: 6, lineHeight: 18 },
   sectionTitle: { fontSize: 19, fontFamily: font.bold, color: T.ink, letterSpacing: -0.5, marginTop: 26, marginBottom: 14 },
   codeChips:    { gap: 8, paddingBottom: 14 },
+  groupList:    { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  groupRow:     { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  groupText:    { flexShrink: 1, fontSize: 13, fontFamily: font.regular, color: T.ink, lineHeight: 19 },
+  groupMeta:    { fontSize: 12, fontFamily: font.regular, color: T.sub },
+  groupLink:    { fontSize: 13, fontFamily: font.medium, color: T.ink, textDecorationLine: 'underline' },
 
   codeCard:     { backgroundColor: T.white, borderRadius: 18, borderWidth: 1, borderColor: T.line, marginBottom: 12, overflow: 'hidden' },
   codeTop:      { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },

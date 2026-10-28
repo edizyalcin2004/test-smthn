@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native';
 import { PressScale } from '../lib/motion';
+import { groupCodes } from '../lib/codeGroups';
 import { T, font, money } from '../theme/tokens';
 import { Screen, Title, PrimaryButton } from '../components/ui';
 import { Icon } from '../components/icons';
@@ -60,9 +61,17 @@ export default function HubScreen({ navigation }) {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // Same grouping as Kodlar: real codes (soonest expiry first), then a
+  // platform campaign once instead of once per restaurant.
   const top = useMemo(() => {
-    const ts = (c) => { const d = c.expiry_date ? new Date(c.expiry_date).getTime() : NaN; return isNaN(d) ? Infinity : d; };
-    return [...codes].sort((a, b) => ts(a) - ts(b)).slice(0, 5);
+    const exp = (g) => { const c = g.kind === 'restaurant' ? g.best : g.code; const t = c.expiry_date ? new Date(c.expiry_date).getTime() : NaN; return Number.isNaN(t) ? Infinity : t; };
+    // soonest expiry first (urgency, unchanged), then the grouped order
+    return groupCodes(codes).map((g, i) => [g, i]).sort((x, y) => exp(x[0]) - exp(y[0]) || x[1] - y[1]).map(([g]) => g).slice(0, 5).map((g) => {
+    const c = g.kind === 'restaurant' ? g.best : g.code;
+    const sub = g.kind === 'campaign' ? `${c.platform?.name} · ${g.places.length} restoranda`
+      : [c.restaurant_name, c.platform?.name, discountText(c)].filter(Boolean).join(' · ');
+    return { ...c, _sub: sub };
+  });
   }, [codes]);
 
   const toSearch = (params) => navigation.navigate('Compare', { screen: 'Search', params });
@@ -138,7 +147,7 @@ export default function HubScreen({ navigation }) {
             <View style={s.codeIcon}><Icon name="tag" s={20} c={T.ink} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.codeText} numberOfLines={1}>{c.code || c.title}</Text>
-              <Text style={s.codeSub} numberOfLines={1}>{c.platform?.name} · {discountText(c)}</Text>
+              <Text style={s.codeSub} numberOfLines={1}>{c._sub}</Text>
             </View>
             {timeLeft(c.expiry_date) ? <Text style={s.codeLeft}>{timeLeft(c.expiry_date)}</Text> : null}
           </PressScale>

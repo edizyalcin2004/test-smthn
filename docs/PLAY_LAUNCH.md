@@ -24,8 +24,9 @@ before production access
 1. **Support email** → send it to Claude; it goes on both pages and the listing.
 2. **Real Android phone test** of the preview APK (every tab, a comparison,
    "Restoranı aç", Deals "Uygulamaya git", Hesabım → Gizlilik).
-3. **Store graphics**: 512×512 icon (Claude has one), 1024×500 feature
-   graphic, at least 2 phone screenshots.
+3. ~~Store graphics~~ DONE 2026-11-08: `store/graphics/` (512 icon, 1024×500
+   feature graphic) and `store/screenshots/android/` (5 real screenshots).
+   Listing text: `docs/STORE_LISTING.md`.
 
 ## Ediz's clicks, in order
 
@@ -50,12 +51,14 @@ before production access
 > Doybi compares the total price of the same restaurant basket across Turkish
 > food-delivery platforms (Trendyol Yemek, Yemeksepeti, Migros Yemek,
 > Tıklagelsin, and the restaurant's own site). No login or account is needed.
-> To test: open the "Compare" tab, pick McDonald's, add 2–3 items, tap
-> "Fiyatları karşılaştır". The result ranks platforms by basket total (delivery
-> fee excluded) with discount codes applied; "Restoranı aç" / "Platformu aç"
-> opens that platform's own page. Doybi does not take orders or payments
-> and is not affiliated with any platform; prices are read from public pages
-> and refreshed twice a week. Internet connection required.
+> To test: open the "Karşılaştır" tab, pick Burger King, tap + on Whopper®,
+> choose "Peynir İstemiyorum", tap "Sepete ekle", add one more item, then tap
+> "Sepeti incele" and "Fiyatları karşılaştır". The result ranks platforms by
+> basket total (delivery fee excluded) with public discount codes applied;
+> "Restoranı aç" / "Platformu aç" opens that platform's own page. Doybi does
+> not take orders or payments and is not affiliated with any platform; prices
+> are read from public pages and refreshed every two days. Internet
+> connection required.
 
 **Ads:** No ads.
 
@@ -85,5 +88,5 @@ communication, or other"; answer No to everything → rated for everyone.
 ## Before production (not before the closed test)
 
 - Lawyer review of the privacy text (T-013) and a named data controller.
-- Data refresh: prices update twice a week; the listing must not promise
-  "live" prices.
+- Data refresh: prices update every two days; the listing must not promise
+  "live" prices (docs/STORE_LISTING.md already follows this).
